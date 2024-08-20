@@ -22,20 +22,14 @@ public interface OrdersRepository extends JpaRepository<Orders, Long> {
     Optional<Orders> findByOrderId(Long orderId);
 
     @Query("SELECT o FROM Orders o WHERE o.productsColorSize.productsColor.products.productId = :productId ")
-    List<Orders> findByProductId(long productId);
-
-
-    @Query("SELECT COUNT(o) FROM Orders o WHERE o.status = :status")
-    long countByStatus(String status); // 리뷰 작성한 수
+    List<Orders> findByProductId(@Param("productId") long productId);
 
     @Query("SELECT o FROM Orders o WHERE o.orderId = :orderId and o.user = :user")
-    Orders findByOrderIdAndUserId(@Param("orderId") Long orderId, Users user);
+    Orders findByOrderIdAndUserId(@Param("orderId") Long orderId, @Param("user") Users user);
 
     // 주문한 userId를 반환하도록 하는 메서드
     @Query("select o.user.userId from Orders o where o.orderId = :orderId")
-    Optional<Long> findAuthorUserIdByOrderId(Long orderId);
-
-    Optional<Orders> findTopByUserOrderByCreateAtDesc(Users user);
+    Optional<Long> findAuthorUserIdByOrderId(@Param("orderId") Long orderId);
 
     Optional<Orders> findTopByUserEmailOrderByCreateAtDesc(String email);
 
