@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Log4j2
@@ -119,14 +120,18 @@ public class AuthController {
             String accessToken = jwtUtil.generateToken(claim, 1);
             String refreshToken = jwtUtil.generateToken(claim, 30);
 
-            log.info("getprincipal?" + SecurityContextHolder.getContext().getAuthentication().getPrincipal());
+            Optional<RefreshToken> existingRefreshToken = refreshTokenRepository.findByEmail(userDetails.getUsername());
 
-//            log.info("userDetails의 getClass() =" + userDetails.getClass().getSimpleName());
-            // Refresh Token을 DB에 저장
-            RefreshToken firstRefreshToken = new RefreshToken();
-            firstRefreshToken.setToken(refreshToken);
-            firstRefreshToken.setEmail(userDetails.getUsername());
-            refreshTokenRepository.save(firstRefreshToken);
+            if (existingRefreshToken.isPresent()) {
+                RefreshToken firstRefreshToken = existingRefreshToken.get();
+                firstRefreshToken.setToken(refreshToken);
+                refreshTokenRepository.save(firstRefreshToken);
+            } else {
+                RefreshToken newRefreshToken = new RefreshToken();
+                newRefreshToken.setToken(refreshToken);
+                newRefreshToken.setEmail(userDetails.getUsername());
+                refreshTokenRepository.save(newRefreshToken);
+            }
 
             Map<String, String> tokens = Map.of("accessToken", accessToken, "refreshToken", refreshToken);
 

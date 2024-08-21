@@ -35,6 +35,7 @@ public class JWTUtil {
 
         // 토큰 생성 시간 설정...
         int time = (60 * 24) * days;   // 시간설정 변경... 1day로 ...
+//        int time = (1 * 1) * seconds;
 
         String jwtStr = Jwts.builder()
                 .setHeader(headers)

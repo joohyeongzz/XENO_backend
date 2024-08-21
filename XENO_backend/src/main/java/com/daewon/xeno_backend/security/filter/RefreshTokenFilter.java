@@ -1,6 +1,9 @@
 
 package com.daewon.xeno_backend.security.filter;
 
+import com.daewon.xeno_backend.domain.RefreshToken;
+import com.daewon.xeno_backend.domain.Users;
+import com.daewon.xeno_backend.repository.RefreshTokenRepository;
 import com.daewon.xeno_backend.security.exception.RefreshTokenException;
 import com.daewon.xeno_backend.utils.JWTUtil;
 import com.google.gson.Gson;
@@ -21,6 +24,7 @@ import java.io.Reader;
 import java.time.Instant;
 import java.util.Date;
 import java.util.Map;
+import java.util.Optional;
 
 @Log4j2
 @RequiredArgsConstructor
@@ -28,6 +32,7 @@ public class RefreshTokenFilter extends OncePerRequestFilter {
 
     private final String refreshToken;
     private final JWTUtil jwtUtil;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -36,7 +41,7 @@ public class RefreshTokenFilter extends OncePerRequestFilter {
         log.info("path: " + path);
 
         // url주소에 /api이 없으면 refresh Token filter를 skip
-        if(!path.contains("api")) {
+        if(!path.contains("/refreshToken")) {
             log.info("skip refresh token filter..........");
             filterChain.doFilter(request, response);
             return;
@@ -46,6 +51,7 @@ public class RefreshTokenFilter extends OncePerRequestFilter {
 
         // 전송된 JSON에서 accessToken과 refreshToken을 얻어온다
         Map<String, String> tokens = parseRequstJSON(request);
+        log.info("tokens: " + tokens);
 
         String accessToken = tokens.get("accessToken");
         String refreshToken = tokens.get("refreshToken");
@@ -107,6 +113,17 @@ public class RefreshTokenFilter extends OncePerRequestFilter {
         } catch (RefreshTokenException refreshTokenException) {
             refreshTokenException.sendResponseError(response);
             return;
+        }
+    }
+
+    private void updateRefreshTokenInDB(String email, String newRefreshToken) {
+        Optional<RefreshToken> userEmail = refreshTokenRepository.findByEmail(email);
+        if(userEmail.isPresent()) {
+            RefreshToken refreshToken = userEmail.get();
+            refreshToken.setToken(newRefreshToken);
+            refreshTokenRepository.save(refreshToken);
+        } else {
+            log.error("해당하는 이메일에 refreshToken을 찾을수 없음: " + email);
         }
     }
 

@@ -29,7 +29,7 @@ public class RefreshTokenException extends RuntimeException {
 
         Gson gson = new Gson();
 
-        String responseStr = gson.toJson(Map.of("msg",errorCase.name(), "time", new Date()));
+        String responseStr = gson.toJson(Map.of("message",errorCase.name(), "time", new Date()));
 
         try {
             response.getWriter().println(responseStr);
