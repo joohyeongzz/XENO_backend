@@ -96,7 +96,7 @@ public class CustomSecurityConfig {
         );
 
         // refreshToken 호출 처리
-        http.addFilterBefore(new RefreshTokenFilter("/refreshToken", jwtUtil, refreshTokenRepository), TokenCheckFilter.class);
+        http.addFilterBefore(new RefreshTokenFilter("/api", jwtUtil, refreshTokenRepository), TokenCheckFilter.class);
 
         // CSRF 토큰 비활성화
         http.csrf(httpSecurityCsrfConfigurer -> httpSecurityCsrfConfigurer.disable());
@@ -142,7 +142,7 @@ public class CustomSecurityConfig {
     public FilterRegistrationBean<RefreshTokenFilter> refreshTokenFilter() {
         FilterRegistrationBean<RefreshTokenFilter> filterRegistrationBean = new FilterRegistrationBean<>();
 
-        filterRegistrationBean.setFilter(new RefreshTokenFilter("/refreshToken", jwtUtil, refreshTokenRepository));
+        filterRegistrationBean.setFilter(new RefreshTokenFilter("/api", jwtUtil, refreshTokenRepository));
         // 'api/*' 패턴의 모든 요청에 refreshToken Filter 적용
         filterRegistrationBean.addUrlPatterns("/api/*");
 
