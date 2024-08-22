@@ -43,7 +43,7 @@ public class RefreshTokenFilter extends OncePerRequestFilter {
         log.info("path: " + path);
 
         // url주소에 /api이 없으면 refresh Token filter를 skip
-        if(!path.contains("/api")) {
+        if(!path.contains("/refreshToken")) {
             log.info("skip refresh token filter..........");
             filterChain.doFilter(request, response);
             return;
@@ -113,7 +113,7 @@ public class RefreshTokenFilter extends OncePerRequestFilter {
 
             // RefreshToken이 3일도 안 남았다면
             // 1000 * 60 * 60 * 24 * 3
-            if(gapTime < (60 * 3)) {
+            if(gapTime < (1000* 60 * 60 * 24 * 3)) {
                 log.info("새로운 Refresh Token 발급");
                 refreshTokenValue = jwtUtil.generateToken(Map.of("email", email), 30);
             }
