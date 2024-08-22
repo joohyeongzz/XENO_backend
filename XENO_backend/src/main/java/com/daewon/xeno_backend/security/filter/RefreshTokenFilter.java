@@ -1,6 +1,9 @@
 
 package com.daewon.xeno_backend.security.filter;
 
+import com.daewon.xeno_backend.domain.RefreshToken;
+import com.daewon.xeno_backend.domain.Users;
+import com.daewon.xeno_backend.repository.RefreshTokenRepository;
 import com.daewon.xeno_backend.security.exception.RefreshTokenException;
 import com.daewon.xeno_backend.utils.JWTUtil;
 import com.google.gson.Gson;
@@ -15,12 +18,15 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.http.MediaType;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.time.Instant;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @Log4j2
 @RequiredArgsConstructor
@@ -28,6 +34,7 @@ public class RefreshTokenFilter extends OncePerRequestFilter {
 
     private final String refreshToken;
     private final JWTUtil jwtUtil;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -35,9 +42,8 @@ public class RefreshTokenFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         log.info("path: " + path);
 
-        // url주소에 /refreshToken이 없으면 refresh Token filter를 skip
-        if(!path.contains("refreshToken")) {
-//        if(!path.equals(refreshToken)) {
+        // url주소에 /api이 없으면 refresh Token filter를 skip
+        if(!path.contains("/refreshToken")) {
             log.info("skip refresh token filter..........");
             filterChain.doFilter(request, response);
             return;
@@ -47,12 +53,25 @@ public class RefreshTokenFilter extends OncePerRequestFilter {
 
         // 전송된 JSON에서 accessToken과 refreshToken을 얻어온다
         Map<String, String> tokens = parseRequstJSON(request);
+        log.info("tokens: " + tokens);
+
+        if (tokens == null || tokens.isEmpty()) {
+            log.warn("토큰 정보를 파싱할 수 없습니다.");
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         String accessToken = tokens.get("accessToken");
         String refreshToken = tokens.get("refreshToken");
 
         log.info("accessToken : " + accessToken);
         log.info("refreshToken : " + refreshToken);
+
+        if (accessToken == null || refreshToken == null) {
+            log.warn("accessToken 또는 refreshToken이 제공되지 않았습니다.");
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         // accessToken 관련 exception
         try {
@@ -93,8 +112,9 @@ public class RefreshTokenFilter extends OncePerRequestFilter {
             String refreshTokenValue = tokens.get("refreshToken");
 
             // RefreshToken이 3일도 안 남았다면
-            if(gapTime < (1000 * 60 * 60 * 24 * 3)) {
-                log.info("new Refresh Token required......");
+            // 1000 * 60 * 60 * 24 * 3
+            if(gapTime < (1000* 60 * 60 * 24 * 3)) {
+                log.info("새로운 Refresh Token 발급");
                 refreshTokenValue = jwtUtil.generateToken(Map.of("email", email), 30);
             }
 
@@ -111,17 +131,61 @@ public class RefreshTokenFilter extends OncePerRequestFilter {
         }
     }
 
-    private Map<String, String> parseRequstJSON(HttpServletRequest request) {
-
-        // JSON 데이터를 분석해서 email, password 전달 값을 Map으로 처리
-        try(Reader reader = new InputStreamReader(request.getInputStream())) {
-            Gson gson = new Gson();
-
-            return gson.fromJson(reader, Map.class);
-        } catch (Exception e) {
-            log.error(e.getMessage());
+    private void updateRefreshTokenInDB(String email, String newRefreshToken) {
+        Optional<RefreshToken> userEmail = refreshTokenRepository.findByEmail(email);
+        if(userEmail.isPresent()) {
+            RefreshToken refreshToken = userEmail.get();
+            refreshToken.setToken(newRefreshToken);
+            refreshTokenRepository.save(refreshToken);
+        } else {
+            log.error("해당하는 이메일에 refreshToken을 찾을수 없음: " + email);
         }
-        return null;
+    }
+
+//    private Map<String, String> parseRequstJSON(HttpServletRequest request) {
+//
+//        // JSON 데이터를 분석해서 email, password 전달 값을 Map으로 처리
+//        try(Reader reader = new InputStreamReader(request.getInputStream())) {
+//            Gson gson = new Gson();
+//            log.info("gson??: " + gson.toJson(reader));
+//
+//            return gson.fromJson(reader, Map.class);
+//        } catch (Exception e) {
+//            log.error(e.getMessage());
+//        }
+//        return null;
+//    }
+
+    private Map<String, String> parseRequstJSON(HttpServletRequest request) {
+        Map<String, String> tokenMap = new HashMap<>();
+
+        try {
+            String contentType = request.getContentType();
+            if (contentType != null && contentType.contains("application/json")) {
+                StringBuilder stringBuilder = new StringBuilder();
+                BufferedReader bufferedReader = request.getReader();
+                String line;
+                while ((line = bufferedReader.readLine()) != null) {
+                    stringBuilder.append(line);
+                }
+                String jsonBody = stringBuilder.toString();
+
+                Gson gson = new Gson();
+                Map<String, String> parsedMap = gson.fromJson(jsonBody, Map.class);
+
+                if (parsedMap != null) {
+                    tokenMap.putAll(parsedMap);
+                }
+            } else {
+                // JSON이 아닌 경우, 파라미터에서 토큰 추출
+                tokenMap.put("accessToken", request.getParameter("accessToken"));
+                tokenMap.put("refreshToken", request.getParameter("refreshToken"));
+            }
+        } catch (Exception e) {
+            log.error("토큰 파싱 중 오류 발생: " + e.getMessage(), e);
+        }
+
+        return tokenMap;
     }
 
     // accessToken 검증

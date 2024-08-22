@@ -4,14 +4,19 @@ import com.daewon.xeno_backend.domain.UserRole;
 import com.daewon.xeno_backend.domain.Users;
 import com.daewon.xeno_backend.dto.auth.AuthSignupDTO;
 import com.daewon.xeno_backend.dto.auth.SellerInfoCardDTO;
+import com.daewon.xeno_backend.repository.RefreshTokenRepository;
 import com.daewon.xeno_backend.repository.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.modelmapper.ModelMapper;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import javax.transaction.Transactional;
 import java.util.Optional;
 
 @Log4j2
@@ -22,6 +27,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final ModelMapper modelMapper;
     private final PasswordEncoder passwordEncoder;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Override
     public Users signup(AuthSignupDTO authSignupDTO) throws UserEmailExistException {
@@ -105,4 +111,5 @@ public class AuthServiceImpl implements AuthService {
 
         return dto;
     }
+
 }

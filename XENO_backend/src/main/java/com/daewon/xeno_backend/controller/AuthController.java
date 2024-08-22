@@ -1,10 +1,12 @@
 
 package com.daewon.xeno_backend.controller;
 
+import com.daewon.xeno_backend.domain.RefreshToken;
 import com.daewon.xeno_backend.domain.Users;
 import com.daewon.xeno_backend.dto.auth.AuthSigninDTO;
 import com.daewon.xeno_backend.dto.auth.AuthSignupDTO;
 import com.daewon.xeno_backend.dto.auth.SellerInfoCardDTO;
+import com.daewon.xeno_backend.repository.RefreshTokenRepository;
 import com.daewon.xeno_backend.security.UsersDetailsService;
 import com.daewon.xeno_backend.service.AuthService;
 import com.daewon.xeno_backend.utils.JWTUtil;
@@ -16,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -24,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Log4j2
@@ -36,7 +40,7 @@ public class AuthController {
     private final JWTUtil jwtUtil;
     private final AuthService authService;
     private final UsersDetailsService usersDetailsService;
-//    private final RefreshTokenRepository refreshTokenRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @GetMapping("/signup")
     public void signupGET() {
@@ -79,16 +83,6 @@ public class AuthController {
         return null;
     }
 
-//    @GetMapping("/signin")
-//    public void signinGET(String error, String logout) {
-//        log.info("signin get..................");
-//        log.info("logout : "+logout);
-//
-//        if(logout != null) {
-//            log.info("user logout....");
-//        }
-//    }
-
     @Operation(summary = "로그인 처리", description = "로그인 요청을 처리합니다.")
     @RequestMapping(value = "/signin", method = RequestMethod.POST)
     public ResponseEntity<?> signin(@RequestBody AuthSigninDTO dto) {
@@ -126,21 +120,28 @@ public class AuthController {
             String accessToken = jwtUtil.generateToken(claim, 1);
             String refreshToken = jwtUtil.generateToken(claim, 30);
 
-//            // Refresh Token을 DB에 저장
-//            RefreshToken newToken = new RefreshToken();
-//            newToken.setToken(refreshToken);
-//            newToken.setEmail(userDetails.getUsername());
-//            refreshTokenRepository.save(newToken);
+            Optional<RefreshToken> existingRefreshToken = refreshTokenRepository.findByEmail(userDetails.getUsername());
+
+            if (existingRefreshToken.isPresent()) {
+                RefreshToken firstRefreshToken = existingRefreshToken.get();
+                firstRefreshToken.setToken(refreshToken);
+                refreshTokenRepository.save(firstRefreshToken);
+            } else {
+                RefreshToken newRefreshToken = new RefreshToken();
+                newRefreshToken.setToken(refreshToken);
+                newRefreshToken.setEmail(userDetails.getUsername());
+                refreshTokenRepository.save(newRefreshToken);
+            }
 
             Map<String, String> tokens = Map.of("accessToken", accessToken, "refreshToken", refreshToken);
 
             // ok()에 클라이언트에게 반환할 토큰을 포함
             // ResponseEntity나 @ResponseBody 어노테이션을 사용하면 스프링은 기본적으로 데이터를 JSON 형식으로 변환하여 클라이언트에게 응답함.
-            // 결론은 클라이언트는 JSON 형식으로 데이터를 받게 됨
+            // 결론은 클라이언트는 JSON 형식으로 데이터를 받게 됨ㅁ
             return ResponseEntity.ok(tokens);
         }else {
             // 401에러 발생
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid email or password");
+            return ResponseEntity.status(401).body("이메일이나 비밀번호가 맞지 않습니다.");
         }
     }
 

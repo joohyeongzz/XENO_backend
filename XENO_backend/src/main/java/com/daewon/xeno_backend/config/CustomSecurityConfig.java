@@ -1,6 +1,7 @@
 
 package com.daewon.xeno_backend.config;
 
+import com.daewon.xeno_backend.repository.RefreshTokenRepository;
 import com.daewon.xeno_backend.security.UsersDetailsService;
 import com.daewon.xeno_backend.security.filter.RefreshTokenFilter;
 import com.daewon.xeno_backend.security.filter.TokenCheckFilter;
@@ -39,6 +40,7 @@ public class CustomSecurityConfig {
 
     private final UsersDetailsService usersDetailsServicea;
     private final JWTUtil jwtUtil;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -94,7 +96,7 @@ public class CustomSecurityConfig {
         );
 
         // refreshToken 호출 처리
-        http.addFilterBefore(new RefreshTokenFilter("/refreshToken", jwtUtil), TokenCheckFilter.class);
+        http.addFilterBefore(new RefreshTokenFilter("/refreshToken", jwtUtil, refreshTokenRepository), TokenCheckFilter.class);
 
         // CSRF 토큰 비활성화
         http.csrf(httpSecurityCsrfConfigurer -> httpSecurityCsrfConfigurer.disable());
@@ -140,7 +142,7 @@ public class CustomSecurityConfig {
     public FilterRegistrationBean<RefreshTokenFilter> refreshTokenFilter() {
         FilterRegistrationBean<RefreshTokenFilter> filterRegistrationBean = new FilterRegistrationBean<>();
 
-        filterRegistrationBean.setFilter(new RefreshTokenFilter("/refreshToken", jwtUtil));
+        filterRegistrationBean.setFilter(new RefreshTokenFilter("/refreshToken", jwtUtil, refreshTokenRepository));
         // 'api/*' 패턴의 모든 요청에 refreshToken Filter 적용
         filterRegistrationBean.addUrlPatterns("/api/*");
 
