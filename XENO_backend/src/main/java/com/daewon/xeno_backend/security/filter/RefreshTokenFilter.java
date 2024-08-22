@@ -2,7 +2,6 @@
 package com.daewon.xeno_backend.security.filter;
 
 import com.daewon.xeno_backend.domain.RefreshToken;
-import com.daewon.xeno_backend.domain.Users;
 import com.daewon.xeno_backend.repository.RefreshTokenRepository;
 import com.daewon.xeno_backend.security.exception.RefreshTokenException;
 import com.daewon.xeno_backend.utils.JWTUtil;
@@ -20,8 +19,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
 import java.time.Instant;
 import java.util.Date;
 import java.util.HashMap;

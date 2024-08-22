@@ -1,7 +1,7 @@
 
 package com.daewon.xeno_backend.security;
 
-import com.daewon.xeno_backend.domain.Users;
+import com.daewon.xeno_backend.domain.auth.Users;
 import com.daewon.xeno_backend.dto.auth.AuthSigninDTO;
 import com.daewon.xeno_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;

@@ -1,6 +1,7 @@
-package com.daewon.xeno_backend.domain;
+package com.daewon.xeno_backend.domain.auth;
 
 
+import com.daewon.xeno_backend.domain.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -26,15 +27,23 @@ public class Users extends BaseEntity {
   @Column(unique = true)
   private String email;
 
-  private String brandName;
-
   private String name;
 
   private String address;
 
   private String phoneNumber;
 
-  private String companyId;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "brandId", referencedColumnName = "brandId")
+  private Brand brand;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "managerId", referencedColumnName = "managerId")
+  private Manager manager;
+
+  @OneToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "customerId", referencedColumnName = "customerId")
+  private Customer customer;
 
   @ElementCollection(fetch = FetchType.LAZY)
   @Builder.Default

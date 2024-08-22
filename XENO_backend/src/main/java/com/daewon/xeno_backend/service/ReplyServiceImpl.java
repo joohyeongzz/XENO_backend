@@ -2,7 +2,7 @@ package com.daewon.xeno_backend.service;
 
 import com.daewon.xeno_backend.domain.Reply;
 import com.daewon.xeno_backend.domain.Review;
-import com.daewon.xeno_backend.domain.Users;
+import com.daewon.xeno_backend.domain.auth.Users;
 import com.daewon.xeno_backend.dto.reply.ReplyDTO;
 import com.daewon.xeno_backend.dto.reply.ReplyReadDTO;
 import com.daewon.xeno_backend.dto.reply.ReplyUpdateDTO;
