@@ -4,8 +4,10 @@ import com.daewon.xeno_backend.domain.UserRole;
 import com.daewon.xeno_backend.domain.Users;
 import com.daewon.xeno_backend.dto.auth.AuthSignupDTO;
 import com.daewon.xeno_backend.dto.auth.SellerInfoCardDTO;
+import com.daewon.xeno_backend.dto.auth.TokenDTO;
 import com.daewon.xeno_backend.repository.RefreshTokenRepository;
 import com.daewon.xeno_backend.repository.UserRepository;
+import com.daewon.xeno_backend.utils.JWTUtil;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -17,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
+import java.util.Map;
 import java.util.Optional;
 
 @Log4j2
@@ -28,6 +31,7 @@ public class AuthServiceImpl implements AuthService {
     private final ModelMapper modelMapper;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final JWTUtil jwtUtil;
 
     @Override
     public Users signup(AuthSignupDTO authSignupDTO) throws UserEmailExistException {
@@ -112,4 +116,15 @@ public class AuthServiceImpl implements AuthService {
         return dto;
     }
 
+    @Override
+    public TokenDTO tokenReissue(String refreshToken) {
+
+        Map<String, Object> claims = jwtUtil.validateToken(refreshToken);
+
+        String email = (String) claims.get("email");
+
+        String newAccessToken = jwtUtil.generateToken(Map.of("email", email), 1); // 30분 유효
+
+        return new TokenDTO(newAccessToken, refreshToken);
+    }
 }
