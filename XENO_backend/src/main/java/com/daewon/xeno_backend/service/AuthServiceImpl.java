@@ -1,24 +1,20 @@
 package com.daewon.xeno_backend.service;
 
-import com.daewon.xeno_backend.domain.UserRole;
-import com.daewon.xeno_backend.domain.Users;
+import com.daewon.xeno_backend.domain.auth.UserRole;
+import com.daewon.xeno_backend.domain.auth.Users;
 import com.daewon.xeno_backend.dto.auth.AuthSignupDTO;
 import com.daewon.xeno_backend.dto.auth.SellerInfoCardDTO;
 import com.daewon.xeno_backend.dto.auth.TokenDTO;
 import com.daewon.xeno_backend.repository.RefreshTokenRepository;
 import com.daewon.xeno_backend.repository.UserRepository;
 import com.daewon.xeno_backend.utils.JWTUtil;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.modelmapper.ModelMapper;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import javax.transaction.Transactional;
 import java.util.Map;
 import java.util.Optional;
 
@@ -60,12 +56,12 @@ public class AuthServiceImpl implements AuthService {
         }
     
         Users users = modelMapper.map(authSignupDTO, Users.class);
-        
+
         users.setName(authSignupDTO.getName());  // 명시적으로 이름 설정
         users.setPassword(passwordEncoder.encode(authSignupDTO.getPassword()));
         users.addRole(UserRole.SELLER);
-        users.setCompanyId(authSignupDTO.getCompanyId());
-        users.setBrandName(authSignupDTO.getBrandName());
+//        users.setCompanyId(authSignupDTO.getCompanyId());
+//        users.setBrandName(authSignupDTO.getBrandName());
         users.setAddress(authSignupDTO.getAddress());
         users.setPhoneNumber(authSignupDTO.getPhoneNumber());
     
@@ -110,7 +106,7 @@ public class AuthServiceImpl implements AuthService {
     public SellerInfoCardDTO readSellerInfo(UserDetails userDetails) {
         Users users = userRepository.findByEmail(userDetails.getUsername()).orElse(null);
         SellerInfoCardDTO dto = new SellerInfoCardDTO();
-                dto.setBrandName(users.getBrandName());
+//                dto.setBrandName(users.getBrandName());
                 dto.setName(users.getName());
 
         return dto;
