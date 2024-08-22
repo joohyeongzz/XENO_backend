@@ -53,4 +53,12 @@ public class Users extends BaseEntity {
     this.roleSet.add(userRole);
   }
 
+  @ElementCollection(fetch = FetchType.LAZY)
+  @Builder.Default
+  private Set<Level> levelSet = new HashSet<>();
+
+  public void addLevel(Level level) {
+    this.levelSet.add(level);
+  }
+
 }
