@@ -20,8 +20,10 @@ public class Customer {
     @OneToOne(mappedBy = "customer", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private Users user;
 
+    // 적립금
     private Long point;
 
+    // 유저 등급
     @Enumerated(EnumType.STRING)
     private Level level;
 }

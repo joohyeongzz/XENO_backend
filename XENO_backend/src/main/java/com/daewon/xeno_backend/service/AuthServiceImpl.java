@@ -1,5 +1,6 @@
 package com.daewon.xeno_backend.service;
 
+import com.daewon.xeno_backend.domain.auth.Level;
 import com.daewon.xeno_backend.domain.auth.UserRole;
 import com.daewon.xeno_backend.domain.auth.Users;
 import com.daewon.xeno_backend.dto.auth.AuthSignupDTO;
@@ -39,6 +40,7 @@ public class AuthServiceImpl implements AuthService {
 
         users.setPassword(passwordEncoder.encode(authSignupDTO.getPassword()));
         users.addRole(UserRole.USER);
+        users.addLevel(Level.BRONZE);
 
         log.info("================================");
         log.info(users);
