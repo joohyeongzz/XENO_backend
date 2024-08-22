@@ -1,10 +1,9 @@
 package com.daewon.xeno_backend.service;
 
-import com.daewon.xeno_backend.domain.Users;
+import com.daewon.xeno_backend.domain.auth.Users;
 import com.daewon.xeno_backend.dto.auth.AuthSignupDTO;
 import com.daewon.xeno_backend.dto.auth.SellerInfoCardDTO;
 import com.daewon.xeno_backend.dto.auth.TokenDTO;
-import org.springframework.security.core.token.TokenService;
 import org.springframework.security.core.userdetails.UserDetails;
 
 public interface AuthService {

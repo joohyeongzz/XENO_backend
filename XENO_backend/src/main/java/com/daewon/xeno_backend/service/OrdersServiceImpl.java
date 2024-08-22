@@ -1,6 +1,7 @@
 package com.daewon.xeno_backend.service;
 
 import com.daewon.xeno_backend.domain.*;
+import com.daewon.xeno_backend.domain.auth.Users;
 import com.daewon.xeno_backend.dto.auth.GetOneDTO;
 import com.daewon.xeno_backend.dto.order.*;
 import com.daewon.xeno_backend.dto.page.PageInfinityResponseDTO;

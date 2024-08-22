@@ -1,6 +1,6 @@
 package com.daewon.xeno_backend.controller;
 
-import com.daewon.xeno_backend.domain.Users;
+import com.daewon.xeno_backend.domain.auth.Users;
 import com.daewon.xeno_backend.dto.auth.AuthSigninDTO;
 import com.daewon.xeno_backend.dto.cart.AddToCartDTO;
 import com.daewon.xeno_backend.dto.cart.CartDTO;

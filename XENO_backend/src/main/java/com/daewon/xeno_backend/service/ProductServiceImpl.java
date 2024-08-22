@@ -1,6 +1,7 @@
 package com.daewon.xeno_backend.service;
 
 import com.daewon.xeno_backend.domain.*;
+import com.daewon.xeno_backend.domain.auth.Users;
 import com.daewon.xeno_backend.dto.page.PageInfinityResponseDTO;
 import com.daewon.xeno_backend.dto.page.PageRequestDTO;
 import com.daewon.xeno_backend.dto.page.PageResponseDTO;
@@ -82,7 +83,7 @@ public class ProductServiceImpl implements ProductService {
 
         // 1. Products 엔티티 생성 및 저장
         Products product = Products.builder()
-                .brandName(users.getBrandName())
+//                .brandName(users.getBrandName())
                 .name(dto.getName())
                 .category(dto.getCategory())
                 .categorySub(dto.getCategorySub())

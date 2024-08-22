@@ -2,14 +2,13 @@
 package com.daewon.xeno_backend.controller;
 
 import com.daewon.xeno_backend.domain.RefreshToken;
-import com.daewon.xeno_backend.domain.Users;
+import com.daewon.xeno_backend.domain.auth.Users;
 import com.daewon.xeno_backend.dto.auth.AuthSigninDTO;
 import com.daewon.xeno_backend.dto.auth.AuthSignupDTO;
 import com.daewon.xeno_backend.dto.auth.SellerInfoCardDTO;
 import com.daewon.xeno_backend.repository.RefreshTokenRepository;
 import com.daewon.xeno_backend.security.UsersDetailsService;
 import com.daewon.xeno_backend.service.AuthService;
-import com.daewon.xeno_backend.service.AuthServiceImpl;
 import com.daewon.xeno_backend.utils.JWTUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -19,7 +18,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
