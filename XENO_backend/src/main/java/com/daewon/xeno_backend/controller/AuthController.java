@@ -9,6 +9,7 @@ import com.daewon.xeno_backend.dto.auth.SellerInfoCardDTO;
 import com.daewon.xeno_backend.repository.RefreshTokenRepository;
 import com.daewon.xeno_backend.security.UsersDetailsService;
 import com.daewon.xeno_backend.service.AuthService;
+import com.daewon.xeno_backend.service.AuthServiceImpl;
 import com.daewon.xeno_backend.utils.JWTUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -144,7 +145,6 @@ public class AuthController {
             return ResponseEntity.status(401).body("이메일이나 비밀번호가 맞지 않습니다.");
         }
     }
-
 
     @GetMapping("/seller/read")
     public ResponseEntity<?> readSellerInfo(@AuthenticationPrincipal UserDetails userDetails) {
