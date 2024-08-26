@@ -21,13 +21,15 @@ public class ProductsImage {
   private long productImageId;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "productColorId", referencedColumnName = "productColorId")
+  @JoinColumn(name = "productId", referencedColumnName = "productId")
   @OnDelete(action = OnDeleteAction.CASCADE)
-  private ProductsColor productsColor;
+  private Products products;
 
-  private String fileName;
-  private String uuid;
-
-  private boolean isMain;
+  private String url_1;
+  private String url_2;
+  private String url_3;
+  private String url_4;
+  private String url_5;
+  private String url_6;
 
 }

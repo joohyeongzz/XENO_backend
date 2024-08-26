@@ -1,7 +1,6 @@
 package com.daewon.xeno_backend;
 
 import com.daewon.xeno_backend.dto.auth.AuthSigninDTO;
-import com.daewon.xeno_backend.repository.ProductsColorRepository;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

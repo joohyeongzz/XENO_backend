@@ -26,9 +26,9 @@
      @Operation(summary = "좋아요")
      @PreAuthorize("hasRole('USER')")
      @GetMapping()
-     public ResponseEntity<String> like(@RequestParam Long productColorId) {
+     public ResponseEntity<String> like(@RequestParam Long productId) {
          try {
-         likeService.likeProduct(productColorId);
+         likeService.likeProduct(productId);
              return ResponseEntity.ok("\"좋아요 성공\"");
          } catch (Exception e) {
              // 오류 발생 시

@@ -8,13 +8,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 public interface ProductsDetailImageRepository extends JpaRepository<ProductsDetailImage, Long> {
-    @Query("SELECT p FROM ProductsDetailImage p WHERE p.productsColor.productColorId = :productColorId")
-    Page<ProductsDetailImage> findByProductColorId(Long productColorId, Pageable pageable);
+    @Query("SELECT p FROM ProductsDetailImage p WHERE p.products.productId = :productId")
+    Page<ProductsDetailImage> findByProductId(Long productId, Pageable pageable);
 
-    @Query("SELECT p FROM ProductsDetailImage p WHERE p.productsColor.productColorId = :productColorId")
-    ProductsDetailImage findOneByProductColorId(Long productColorId);
+    @Query("SELECT p FROM ProductsDetailImage p WHERE p.products.productId = :productId")
+    ProductsDetailImage findOneByproductId(Long productId);
 
-    @Query("delete from ProductsDetailImage p WHERE p.productsColor.productColorId = :productColorId ")
-    void deleteAllByProductColorId(Long productColorId);
+    @Query("delete from ProductsDetailImage p WHERE p.products.productId = :productId ")
+    void deleteAllByproductId(Long productId);
 
 }

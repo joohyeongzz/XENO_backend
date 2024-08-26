@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class ProductsStarRankListDTO {
 
-    private Long productColorId;
+    private Long productId;
 
     private String brandName;
 

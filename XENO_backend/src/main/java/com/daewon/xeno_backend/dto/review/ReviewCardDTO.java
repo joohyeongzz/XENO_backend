@@ -11,6 +11,6 @@ import lombok.Setter;
 @AllArgsConstructor
 public class ReviewCardDTO {
     private Long reviewId;
-    private Long productColorId;
+    private Long productId;
     private byte[] reviewImage;
 }

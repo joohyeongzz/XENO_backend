@@ -15,16 +15,15 @@ import java.util.List;
 
 public interface ProductService {
 
-    ProductInfoDTO getProductColorInfo(Long productColorId) throws IOException;
-    ProductCreateGetInfoDTO getProductInfo(Long productId) throws IOException;
+    void uploadImages(List<MultipartFile> productImages ,MultipartFile productDetailImage);
 
-    ProductColorInfoCardDTO getProductCardInfo(Long productColorId);
+    ProductInfoDTO getProductInfo(Long productId) throws IOException;
 
-    ProductDetailImagesDTO getProductDetailImages(Long productColorId, int page, int size);
+    ProductColorInfoCardDTO getProductCardInfo(Long productId);
 
-    List<ProductOtherColorImagesDTO> getRelatedColorProductsImages(Long productColorId) throws IOException;
+    ProductDetailImagesDTO getProductDetailImages(Long productId, int page, int size);
 
-    ProductOrderBarDTO getProductOrderBar(Long productColorId);
+    ProductOrderBarDTO getProductOrderBar(Long productId);
 
     List<ProductColorInfoCardDTO> getProductsInfoByCategory(String categoryId, String categorySubId);
 
@@ -34,15 +33,6 @@ public interface ProductService {
 
     PageInfinityResponseDTO<ProductsStarRankListDTO> getrankTop50(String category, PageRequestDTO pageRequestDTO);
 
-    Products createProduct(ProductRegisterDTO productregisterDTO, List<MultipartFile> productImage, MultipartFile productDetailImage);
-
-    String updateProduct(ProductUpdateDTO productUpdateDTO);
-
-    void deleteProduct(Long productId);
-
-    void deleteProductColor(Long productColorId);
-
-    String createProductColor(ProductRegisterColorDTO dto, List<MultipartFile> productImage, MultipartFile productDetailImage);
 
     List<ProductListBySellerDTO> getProductListBySeller(String email);
 
@@ -50,11 +40,6 @@ public interface ProductService {
 
     PageResponseDTO<ProductsSearchDTO> BrandNameOrNameOrCategoryOrCategorysubSearch(String keyword,PageRequestDTO pageRequestDTO);
 
-    String updateProductColor(ProductUpdateColorDTO dto, List<MultipartFile> productImage, MultipartFile productDetailImage);
-
-    List<ProductColorListBySellerDTO> getProductColorListBySeller(String email);
-
-    ProductColorUpdateGetInfoDTO getProductColorSizeInfo(Long productColorId) throws IOException;
-
+    void saveProductsFromExcel(String filePath);
 
 }

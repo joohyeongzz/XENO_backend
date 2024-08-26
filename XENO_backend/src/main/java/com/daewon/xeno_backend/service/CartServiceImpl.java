@@ -29,11 +29,8 @@ public class CartServiceImpl implements CartService {
     private final UserRepository userRepository;
     private final ProductsRepository productsRepository;
     private final CartRepository cartRepository;
-    private final ProductsColorSizeRepository productsColorSizeRepository;
+    private final ProductsOptionRepository productsOptionRepository;
     private final ProductsImageRepository productsImageRepository;
-
-    @Value("${uploadPath}")
-    private String uploadPath;
 
     @Override
     public void addToCart(List<AddToCartDTO> addToCartDTOList) {
@@ -51,14 +48,14 @@ public class CartServiceImpl implements CartService {
 
         for(AddToCartDTO addToCartDTO: addToCartDTOList) {
 
-            cart = cartRepository.findByProductColorSizeIdAndUser(addToCartDTO.getProductColorSizeId(),users.getUserId()).orElse(null);
+            cart = cartRepository.findByProductOptionIdAndUser(addToCartDTO.getProductOptionId(),users.getUserId()).orElse(null);
 
-            ProductsColorSize productsColorSize = productsColorSizeRepository.findById(addToCartDTO.getProductColorSizeId()).orElse(null);
-            ProductsImage productsImage = productsImageRepository.findFirstByProductColorId(productsColorSize.getProductsColor().getProductColorId());
+            ProductsOption productsOption = productsOptionRepository.findById(addToCartDTO.getProductOptionId()).orElse(null);
+            ProductsImage productsImage = productsImageRepository.findByProductId(productsOption.getProducts().getProductId());
             if(cart == null) {
                 cart = Cart.builder()
                         .price(addToCartDTO.getPrice())
-                        .productsColorSize(productsColorSize)
+                        .productsOption(productsOption)
                         .quantity(addToCartDTO.getQuantity())
                         .user(users)
                         .productsImage(productsImage)
@@ -125,34 +122,19 @@ public class CartServiceImpl implements CartService {
     public CartDTO convertToDTO(Cart cart) {
         CartDTO cartDTO = new CartDTO();
         cartDTO.setCartId(cart.getCartId());
-        cartDTO.setProductsColorSizeId(cart.getProductsColorSize().getProductColorSizeId());
+        cartDTO.setProductsOptionId(cart.getProductsOption().getProductOptionId());
         cartDTO.setQuantity(cart.getQuantity());
         cartDTO.setAmount(cart.getPrice());
-        cartDTO.setBrandName(cart.getProductsColorSize().getProductsColor().getProducts().getBrandName());
-        cartDTO.setSale(cart.getProductsColorSize().getProductsColor().getProducts().getIsSale());
+        cartDTO.setBrandName(cart.getProductsOption().getProducts().getBrandName());
+        cartDTO.setSale(cart.getProductsOption().getProducts().getIsSale());
         cartDTO.setPrice(cart.getPrice()/cart.getQuantity());
-        cartDTO.setProductName(cart.getProductsColorSize().getProductsColor().getProducts().getName());
-        cartDTO.setColor(cart.getProductsColorSize().getProductsColor().getColor());
-        cartDTO.setSize(String.valueOf(cart.getProductsColorSize().getSize()));
+        cartDTO.setProductName(cart.getProductsOption().getProducts().getName());
+        cartDTO.setColor(cart.getProductsOption().getProducts().getColor());
+        cartDTO.setSize(String.valueOf(cart.getProductsOption().getSize()));
 
-        ProductsImage image = cart.getProductsImage();
-        if (image != null) {
-            try {
-                byte[] imageData = getImage(image.getUuid(), image.getFileName());
-                cartDTO.setProductImage(imageData);
-            } catch (IOException e) {
-                log.error("이미지 로딩 실패: " + e.getMessage());
-            }
-        }
 
         return cartDTO;
     }
 
-    public byte[] getImage(String uuid, String fileName) throws IOException {
-        String filePath = uploadPath + uuid + "_" + fileName;
-        // 파일을 바이트 배열로 읽기
-        Path path = Paths.get(filePath);
-        byte[] image = Files.readAllBytes(path);
-        return image;
-    }
+
 }
