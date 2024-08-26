@@ -25,8 +25,6 @@ public class ProductsDetailImage {
   @OnDelete(action = OnDeleteAction.CASCADE)
   private Products products;
 
-  private String fileName;
-
-  private String uuid;
+  private String url_1;
 
 }

@@ -90,9 +90,9 @@ public class ProductServiceImpl implements ProductService {
             saveImage(productDetailImage);
     }
 
-    public void saveProductsFromExcel(String filePath) {
+    public void saveProductsFromExcel(MultipartFile excel) {
         try {
-            List<ProductRegisterDTO> productList = excelService.parseExcelFile(filePath);
+            List<ProductRegisterDTO> productList = excelService.parseExcelFile(excel);
             // 엑셀에서 가져온 품번을 추출
             Set<String> productNumbersFromExcel = productList.stream()
                     .map(ProductRegisterDTO::getProductNumber)
@@ -130,8 +130,25 @@ public class ProductServiceImpl implements ProductService {
                                 .stock(size.getStock())
                                 .build();
                         productsOptionRepository.save(productsOption);
-
                     }
+                    ProductsImage productsImage = ProductsImage.builder()
+                            .products(newProduct)
+                            .url_1(dto.getUrl_1())
+                            .url_2(dto.getUrl_2())
+                            .url_3(dto.getUrl_3())
+                            .url_4(dto.getUrl_4())
+                            .url_5(dto.getUrl_5())
+                            .url_6(dto.getUrl_6())
+                            .build();
+                    productsImageRepository.save(productsImage);
+
+
+                    ProductsDetailImage productsDetailImage = ProductsDetailImage.builder()
+                            .products(newProduct)
+                            .url_1(dto.getDetail_url_1())
+                            .build();
+                    productsDetailImageRepository.save(productsDetailImage);
+
                 } else {
                     existingProduct.setName(dto.getName());
                     existingProduct.setCategory(dto.getCategory());
@@ -174,6 +191,19 @@ public class ProductServiceImpl implements ProductService {
                             productsOptionRepository.delete(colorSize);
                         }
                     }
+                    ProductsImage productsImage = productsImageRepository.findByProductId(existingProduct.getProductId());
+                    productsImage.setUrl_1(dto.getUrl_1());
+                    productsImage.setUrl_2(dto.getUrl_2());
+                    productsImage.setUrl_3(dto.getUrl_3());
+                    productsImage.setUrl_4(dto.getUrl_4());
+                    productsImage.setUrl_5(dto.getUrl_5());
+                    productsImage.setUrl_6(dto.getUrl_6());
+                    productsImageRepository.save(productsImage);
+                    ProductsDetailImage productsDetailImage = productsDetailImageRepository.findOneByProductId(existingProduct.getProductId());
+                    productsDetailImage.setUrl_1(dto.getDetail_url_1());
+
+                    productsDetailImageRepository.save(productsDetailImage);
+
                 }
             }
         } catch (IOException e) {
@@ -581,7 +611,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public ProductInfoDTO getProductInfo(Long productId) {
 
-        Products products = productsRepository.findById(productId).orElse(null);
+        Products products = productsRepository.findByProductId(productId);
         ProductInfoDTO productInfoDTO = modelMapper.map(products, ProductInfoDTO.class); // dto 매핑
 
         productInfoDTO.setProductId(products.getProductId());
@@ -630,6 +660,14 @@ public class ProductServiceImpl implements ProductService {
                         : 0);
 
         ProductsImage productImages = productsImageRepository.findByProductId(products.getProductId());
+        productInfoDTO.setUrl_1(productImages.getUrl_1());
+        productInfoDTO.setUrl_2(productImages.getUrl_2());
+        productInfoDTO.setUrl_3(productImages.getUrl_3());
+        productInfoDTO.setUrl_4(productImages.getUrl_4());
+        productInfoDTO.setUrl_5(productImages.getUrl_5());
+        productInfoDTO.setUrl_6(productImages.getUrl_6());
+        ProductsDetailImage productDetailImage = productsDetailImageRepository.findOneByProductId(products.getProductId());
+        productInfoDTO.setDetail_url_1(productDetailImage.getUrl_1());
 
 
         return productInfoDTO;

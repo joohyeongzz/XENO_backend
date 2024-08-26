@@ -40,6 +40,6 @@ public interface ProductService {
 
     PageResponseDTO<ProductsSearchDTO> BrandNameOrNameOrCategoryOrCategorysubSearch(String keyword,PageRequestDTO pageRequestDTO);
 
-    void saveProductsFromExcel(String filePath);
+    void saveProductsFromExcel(MultipartFile excel);
 
 }

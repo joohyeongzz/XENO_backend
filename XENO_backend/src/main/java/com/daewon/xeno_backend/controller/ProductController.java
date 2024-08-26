@@ -33,10 +33,9 @@ public class ProductController {
 
     private final ProductService productService;
 
-
-
     @GetMapping("/read")
-    public ResponseEntity<ProductInfoDTO> readProduct(@RequestParam Long productId) throws IOException {
+    public ResponseEntity<ProductInfoDTO> readProduct(@RequestParam("productId") Long productId) throws IOException {
+        log.info(productId);
         ProductInfoDTO productInfoDTO = productService.getProductInfo(productId);
 
         return ResponseEntity.ok(productInfoDTO);
@@ -161,11 +160,12 @@ public class ProductController {
         return ResponseEntity.ok(result);
     }
 
-    @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> uploadImage(
             @RequestPart(name = "productImages")  List<MultipartFile> productImages,
             @RequestPart(name = "productDetailImage") MultipartFile productDetailImage) {
         try {
+            log.info("asdsad");
              productService.uploadImages(productImages != null && !productImages.isEmpty() ? productImages : null,
                     productDetailImage != null && !productDetailImage.isEmpty() ? productDetailImage : null
             );
@@ -174,6 +174,13 @@ public class ProductController {
             log.error("상품 등록 중 오류 발생: ", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> createProduct(
+            @RequestPart(name = "excel") MultipartFile excel) {
+        productService.saveProductsFromExcel(excel);
+        return ResponseEntity.ok("\"성공\"");
     }
 
 
