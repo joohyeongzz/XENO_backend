@@ -79,6 +79,12 @@ dependencies {
 	// jjwt 라이브러리
 	implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5', 'io.jsonwebtoken:jjwt-jackson:0.12.5'
+
+	// Excel 2003년 버전 이전 호환 라이브러리
+	implementation group: 'org.apache.poi', name: 'poi', version: '5.2.5'
+
+	// Excel 2007년 버전 이후 호환 라이브러리
+	implementation group: 'org.apache.poi', name: 'poi-ooxml', version: '5.2.5'
 }
 
 dependencyManagement {
