@@ -36,7 +36,6 @@ public class Users extends BaseEntity {
 
   @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
   @JoinColumn(name = "brandId", referencedColumnName = "brandId")
-  @JsonManagedReference
   private Brand brand;
 
   @ManyToOne(fetch = FetchType.LAZY)
@@ -61,16 +60,6 @@ public class Users extends BaseEntity {
 
   public void addLevel(Level level) {
     this.levelSet.add(level);
-  }
-
-  public void setBrand(Brand brand) {
-    this.brand = brand;
-    if (brand != null) {
-      if (brand.getUser() == null) {
-        brand.setUser(new HashSet<>());
-      }
-      brand.getUser().add(this);
-    }
   }
 
 }

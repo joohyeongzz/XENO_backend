@@ -22,11 +22,6 @@ public class Brand extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long brandId;
 
-    @OneToMany(mappedBy = "brand", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JsonIgnore
-    @JsonBackReference
-    private Set<Users> user = new HashSet<>();
-
     @Column(unique = true)
     private String brandName;
 
@@ -39,12 +34,5 @@ public class Brand extends BaseEntity {
     public void addRole(UserRole userRole) {
         this.roleSet.add(userRole);
     }
-
-    public void addUser(Users user) {
-        if (this.user == null) {
-            this.user = new HashSet<>();
-        }
-        this.user.add(user);
-        user.setBrand(this);
-    }
+    
 }
