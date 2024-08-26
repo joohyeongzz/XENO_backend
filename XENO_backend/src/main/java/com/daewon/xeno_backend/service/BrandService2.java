@@ -3,7 +3,7 @@ package com.daewon.xeno_backend.service;
 import com.daewon.xeno_backend.domain.auth.Brand;
 import com.daewon.xeno_backend.domain.auth.UserRole;
 import com.daewon.xeno_backend.domain.auth.Users;
-import com.daewon.xeno_backend.dto.auth.SellerDTO;
+import com.daewon.xeno_backend.dto.auth.BrandDTO;
 import com.daewon.xeno_backend.dto.signup.BrandRegisterDTO;
 import com.daewon.xeno_backend.dto.signup.UserRegisterDTO;
 import com.daewon.xeno_backend.repository.BrandRepository;
@@ -22,7 +22,7 @@ public class BrandService2 {
     private final PasswordEncoder passwordEncoder;
     private final BrandRepository brandRepository;
 
-    public UserRegisterDTO registerSellerUser(SellerDTO dto) {
+    public UserRegisterDTO registerSellerUser(BrandDTO dto) {
         Brand brand = brandRepository.findByBrandName(dto.getBrandName())
                 .orElseGet(() -> {
                     if (dto.getCompanyId() == null) {

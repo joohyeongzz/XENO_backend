@@ -1,6 +1,7 @@
 package com.daewon.xeno_backend.domain.auth;
 
 import com.daewon.xeno_backend.domain.BaseEntity;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
 import net.minidev.json.annotate.JsonIgnore;
@@ -23,6 +24,7 @@ public class Brand extends BaseEntity {
 
     @OneToMany(mappedBy = "brand", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JsonIgnore
+    @JsonBackReference
     private Set<Users> user = new HashSet<>();
 
     @Column(unique = true)

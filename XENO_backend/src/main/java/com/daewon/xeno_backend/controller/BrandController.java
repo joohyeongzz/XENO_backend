@@ -1,7 +1,6 @@
 package com.daewon.xeno_backend.controller;
 
-import com.daewon.xeno_backend.domain.auth.Users;
-import com.daewon.xeno_backend.dto.auth.SellerDTO;
+import com.daewon.xeno_backend.dto.auth.BrandDTO;
 import com.daewon.xeno_backend.dto.signup.UserRegisterDTO;
 import com.daewon.xeno_backend.service.BrandService;
 import com.daewon.xeno_backend.service.BrandService2;
@@ -24,7 +23,7 @@ public class BrandController {
     private final BrandService2 brandService2;
 
     @PostMapping("/register/seller")
-    public ResponseEntity<?> registerSeller(@RequestBody SellerDTO dto) {
+    public ResponseEntity<?> registerSeller(@RequestBody BrandDTO dto) {
 
         try {
             UserRegisterDTO registeredUser = brandService2.registerSellerUser(dto);

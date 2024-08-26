@@ -5,7 +5,9 @@ import com.daewon.xeno_backend.domain.RefreshToken;
 import com.daewon.xeno_backend.domain.auth.Users;
 import com.daewon.xeno_backend.dto.auth.AuthSigninDTO;
 import com.daewon.xeno_backend.dto.auth.AuthSignupDTO;
+import com.daewon.xeno_backend.dto.auth.BrandDTO;
 import com.daewon.xeno_backend.dto.auth.SellerInfoCardDTO;
+import com.daewon.xeno_backend.dto.signup.UserRegisterDTO;
 import com.daewon.xeno_backend.repository.RefreshTokenRepository;
 import com.daewon.xeno_backend.security.UsersDetailsService;
 import com.daewon.xeno_backend.service.AuthService;
@@ -14,6 +16,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -65,21 +68,32 @@ public class AuthController {
         }
     }
 
+//    @Operation(summary = "판매자 회원가입 처리", description = "판매자 회원가입 요청을 처리합니다.")
+//    @PostMapping("/signup/seller")
+//    public Users signupSeller(@RequestBody AuthSignupDTO authSignupDTO) {
+//        log.info("seller signup post.....");
+//        log.info(authSignupDTO);
+//
+//        try {
+//            Users user = authService.signupSeller(authSignupDTO);
+//            log.info(user);
+//            return user;
+//        } catch (AuthService.UserEmailExistException e) {
+//            log.error("Email already exists: " + authSignupDTO.getEmail(), e);
+//        }
+//
+//        return null;
+//    }
     @Operation(summary = "판매자 회원가입 처리", description = "판매자 회원가입 요청을 처리합니다.")
     @PostMapping("/signup/seller")
-    public Users signupSeller(@RequestBody AuthSignupDTO authSignupDTO) {
-        log.info("seller signup post.....");
-        log.info(authSignupDTO);
-
+    public ResponseEntity<?> registerBrand(@RequestBody BrandDTO dto) {
         try {
-            Users user = authService.signupSeller(authSignupDTO);
-            log.info(user);
-            return user;
-        } catch (AuthService.UserEmailExistException e) {
-            log.error("Email already exists: " + authSignupDTO.getEmail(), e);
+            UserRegisterDTO registeredUser = authService.registerBrandUser(dto);
+            return ResponseEntity.status(201).body("판매사 회원가입 완료");
+        } catch (DataIntegrityViolationException e) {
+            log.error("Email 중복 됨 : " + dto.getEmail(), e);
+            return ResponseEntity.status(409).body("이미 존재하는 이메일입니다.");
         }
-
-        return null;
     }
 
     @Operation(summary = "로그인 처리", description = "로그인 요청을 처리합니다.")

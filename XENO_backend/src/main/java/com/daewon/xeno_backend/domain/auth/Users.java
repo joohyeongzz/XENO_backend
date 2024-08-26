@@ -2,6 +2,7 @@ package com.daewon.xeno_backend.domain.auth;
 
 
 import com.daewon.xeno_backend.domain.BaseEntity;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -35,6 +36,7 @@ public class Users extends BaseEntity {
 
   @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
   @JoinColumn(name = "brandId", referencedColumnName = "brandId")
+  @JsonManagedReference
   private Brand brand;
 
   @ManyToOne(fetch = FetchType.LAZY)

@@ -3,10 +3,9 @@ package com.daewon.xeno_backend.service;
 import com.daewon.xeno_backend.domain.auth.Brand;
 import com.daewon.xeno_backend.domain.auth.UserRole;
 import com.daewon.xeno_backend.domain.auth.Users;
-import com.daewon.xeno_backend.dto.auth.SellerDTO;
+import com.daewon.xeno_backend.dto.auth.BrandDTO;
 import com.daewon.xeno_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -17,7 +16,7 @@ public class BrandService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public Users registerSellerUser(SellerDTO dto) {
+    public Users registerSellerUser(BrandDTO dto) {
         // Users 객체 생성
         Users user = Users.builder()
                 .email(dto.getEmail())
