@@ -13,19 +13,21 @@ import org.hibernate.annotations.OnDeleteAction;
 @AllArgsConstructor
 @NoArgsConstructor
 @ToString
-public class ProductsColorSize {
+public class ProductsOption {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY) // auto_increment와 같은
-    private long productColorSizeId;
+    private long productOptionId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "productColorId", referencedColumnName = "productColorId")
+    @JoinColumn(name = "productId", referencedColumnName = "productId")
     @OnDelete(action = OnDeleteAction.CASCADE)
-    private ProductsColor productsColor;
+    private Products products;
 
     @Enumerated(EnumType.STRING)
     private Size size;
+
+    private long stock;
 
 
 }

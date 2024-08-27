@@ -15,10 +15,10 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
 
     List<Cart> findByUser(Users user);
 
-    void deleteByUserAndProductsColorSize(Users user, ProductsColorSize productsColorSize);
+    void deleteByUserAndProductsOption(Users user, ProductsOption productsOption);
 
-    @Query("SELECT c FROM Cart c WHERE c.productsColorSize.productColorSizeId= :productColorSizeId and c.user.userId = :userId")
-    Optional<Cart> findByProductColorSizeIdAndUser(Long productColorSizeId, Long userId);
+    @Query("SELECT c FROM Cart c WHERE c.productsOption.productOptionId= :productOptionId and c.user.userId = :userId")
+    Optional<Cart> findByProductOptionIdAndUser(Long productOptionId, Long userId);
 
     Optional<Cart> findByCartIdAndUserUserId(Long cartId, Long userId);
 

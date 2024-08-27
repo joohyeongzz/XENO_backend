@@ -175,7 +175,7 @@ public class OrdersController {
     http://localhost:8090/api/orders (POST)
     [
         {
-            "productColorSizeId": 4,
+            "productOptionId": 4,
             "req": "hello",
             "quantity": 2,
             "amount": 50000

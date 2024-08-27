@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class ProductsInfoCardDTO {
 
-    private long productColorId;
+    private long productId;
 
     private String brandName;
 

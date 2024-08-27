@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 public class OrdersCardListDTO {
 
     private Long orderId;
-    private Long productColorId;
+    private Long productId;
     private String orderDate;
     private String brandName;
     private String productName;
