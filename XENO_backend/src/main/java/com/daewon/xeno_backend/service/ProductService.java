@@ -15,7 +15,7 @@ import java.util.List;
 
 public interface ProductService {
 
-    void uploadImages(List<MultipartFile> productImages ,MultipartFile productDetailImage);
+    void uploadImages(String productNumber, List<MultipartFile> productImages ,MultipartFile productDetailImage);
 
     ProductInfoDTO getProductInfo(Long productId) throws IOException;
 

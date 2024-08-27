@@ -56,6 +56,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductsSearchRepository productsSearchRepository;
     private final ProductsOptionRepository productsOptionRepository;
     private final ExcelService excelService;
+    private final UploadImageRepository uploadImageRepository;
 
     @Value("${aws.s3.bucket-name}")
     private String bucketName;
@@ -83,11 +84,39 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public void uploadImages(List<MultipartFile> productImages, MultipartFile productDetailImage) {
-            for(MultipartFile productImage : productImages) {
-                saveImage(productImage);
-            }
-            saveImage(productDetailImage);
+    public void uploadImages(String productNumber, List<MultipartFile> productImages, MultipartFile productDetailImage)  {
+        // Initialize URL fields
+        String[] urls = new String[6]; // For up to 6 images
+
+        // Ensure there are no more than 6 images
+        int numberOfImages = Math.min(productImages.size(), urls.length);
+
+        // Process each image
+        for (int i = 0; i < numberOfImages; i++) {
+            MultipartFile productImage = productImages.get(i);
+            urls[i] = saveImage(productImage);
+        }
+
+        // Process detail image
+        String detailUrl = saveImage(productDetailImage);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserName = authentication.getName();
+        Users users = userRepository.findByEmail(currentUserName).orElse(null);
+
+        // Create UploadImage object with the URLs
+        UploadImage uploadImage = UploadImage.builder()
+                .productNumber(productNumber)
+                .url_1(numberOfImages > 0 ? urls[0] : null)
+                .url_2(numberOfImages > 1 ? urls[1] : null)
+                .url_3(numberOfImages > 2 ? urls[2] : null)
+                .url_4(numberOfImages > 3 ? urls[3] : null)
+                .url_5(numberOfImages > 4 ? urls[4] : null)
+                .url_6(numberOfImages > 5 ? urls[5] : null)
+                .detail_url_1(detailUrl)
+                .users(users)
+                .build();
+
+        uploadImageRepository.save(uploadImage);
     }
 
     public void saveProductsFromExcel(MultipartFile excel) {
@@ -112,16 +141,29 @@ public class ProductServiceImpl implements ProductService {
             }
 
             for (ProductRegisterDTO dto : productList) {
+                Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+                String currentUserName = authentication.getName();
+                Users users = userRepository.findByEmail(currentUserName).orElse(null);
                 Products existingProduct = productsRepository.findByProductNumber(dto.getProductNumber());
                 if (existingProduct == null) {
                     Products newProduct = Products.builder()
                             .name(dto.getName())
+                            .brandName("ASD")
                             .category(dto.getCategory())
+                            .categorySub(dto.getCategorySub())
                             .price(dto.getPrice())
+                            .priceSale(dto.getPriceSale())
+                            .isSale(dto.isSale())
+                            .season(dto.getSeason())
                             .productNumber(dto.getProductNumber())
                             .color(dto.getColors())
                             .build();
                     productsRepository.save(newProduct);
+                    ProductsSeller productsSeller = ProductsSeller.builder()
+                            .products(newProduct)
+                            .users(users)
+                            .build();
+                    productsSellerRepository.save(productsSeller);
 
                     for(ProductSizeDTO size: dto.getSize()){
                         ProductsOption productsOption = ProductsOption.builder()
@@ -152,8 +194,13 @@ public class ProductServiceImpl implements ProductService {
                 } else {
                     existingProduct.setName(dto.getName());
                     existingProduct.setCategory(dto.getCategory());
+                    existingProduct.setCategorySub(dto.getCategorySub());
                     existingProduct.setPrice(dto.getPrice());
+                    existingProduct.setPriceSale(dto.getPriceSale());
+                    existingProduct.setIsSale(dto.isSale());
+                    existingProduct.setSeason(dto.getSeason());
                     existingProduct.setColor(dto.getColors());
+
                     productsRepository.save(existingProduct);
                     List<ProductsOption> productsColorSizes = productsOptionRepository.findByProductId(existingProduct.getProductId());
                     // 엑셀에서 가져온 사이즈 목록

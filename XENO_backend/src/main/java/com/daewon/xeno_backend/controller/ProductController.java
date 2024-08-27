@@ -162,11 +162,12 @@ public class ProductController {
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> uploadImage(
+            @RequestPart("productNumber") String productNumber,
             @RequestPart(name = "productImages")  List<MultipartFile> productImages,
             @RequestPart(name = "productDetailImage") MultipartFile productDetailImage) {
         try {
             log.info("asdsad");
-             productService.uploadImages(productImages != null && !productImages.isEmpty() ? productImages : null,
+             productService.uploadImages(productNumber, productImages != null && !productImages.isEmpty() ? productImages : null,
                     productDetailImage != null && !productDetailImage.isEmpty() ? productDetailImage : null
             );
             return ResponseEntity.ok("\"성공\"");
