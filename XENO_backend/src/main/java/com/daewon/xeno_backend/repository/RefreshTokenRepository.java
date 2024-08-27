@@ -16,4 +16,6 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
     int updateTokenByUsername(@Param("newToken") String newToken, @Param("username") String username);
 
     Optional<RefreshToken> findByEmail(String email);
+
+    void deleteByEmail(String email);
 }
