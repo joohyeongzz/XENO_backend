@@ -134,8 +134,8 @@ public class ReviewController {
 
     @Operation(summary = "리뷰 리스트")
     @GetMapping("/read/list")
-    public ResponseEntity<PageResponseDTO<ReviewInfoDTO>> getReviewListByProductColorId(@RequestParam Long productColorId, PageRequestDTO pageRequestDTO) {
-        PageResponseDTO<ReviewInfoDTO> reviews = reviewService.readReviewList(productColorId,pageRequestDTO);
+    public ResponseEntity<PageResponseDTO<ReviewInfoDTO>> getReviewListByproductId(@RequestParam Long productId, PageRequestDTO pageRequestDTO) {
+        PageResponseDTO<ReviewInfoDTO> reviews = reviewService.readReviewList(productId,pageRequestDTO);
         return ResponseEntity.ok(reviews);
     }
 

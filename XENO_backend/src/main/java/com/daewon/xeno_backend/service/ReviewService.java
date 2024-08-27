@@ -24,7 +24,7 @@ public interface ReviewService {
 
     PageInfinityResponseDTO<ReviewCardDTO> readAllReviewImageList(PageRequestDTO pageRequestDTO);
 
-    PageResponseDTO<ReviewInfoDTO> readReviewList(Long productColorId,PageRequestDTO pageRequestDTO);
+    PageResponseDTO<ReviewInfoDTO> readReviewList(Long productId,PageRequestDTO pageRequestDTO);
 
 
 }

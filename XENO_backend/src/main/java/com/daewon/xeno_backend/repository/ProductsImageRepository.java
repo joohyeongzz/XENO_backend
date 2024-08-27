@@ -12,15 +12,10 @@ import java.util.Optional;
 
 public interface ProductsImageRepository extends JpaRepository<ProductsImage, Long> {
 
-    @Query("SELECT p FROM ProductsImage p WHERE p.productsColor.productColorId = :productColorId")
-    List<ProductsImage> findByProductColorId(@Param("productColorId") Long productColorId);
+    @Query("SELECT p FROM ProductsImage p WHERE p.products.productId = :productId")
+     ProductsImage findByProductId(@Param("productId") Long productId);
 
 
-    @Query("SELECT p FROM ProductsImage p WHERE p.productsColor.productColorId = :productColorId and p.isMain=true")
-    ProductsImage findFirstByProductColorId(@Param("productColorId") Long productColorId);
-
-    ProductsImage findByProductsColorProductColorIdAndIsMainTrue(Long productColorId);
-//
 //    Optional<Long> findByProductImageId(List<MultipartFile> productImage);
 
     // 단일 이미지 ID로 조회
@@ -29,12 +24,12 @@ public interface ProductsImageRepository extends JpaRepository<ProductsImage, Lo
     // 또는 여러 이미지 ID로 조회
     List<ProductsImage> findByProductImageIdIn(List<Long> productImageIds);
 
-    void deleteByProductsColorProducts(Products products);
+    void deleteByProducts(Products products);
 
 
 
 
-    @Query("delete from ProductsImage p WHERE p.productsColor.productColorId = :productColorId ")
-    void deleteAllByProductColorId(Long productColorId);
+    @Query("delete from ProductsImage p WHERE p.products.productId = :productId ")
+    void deleteAllByproductId(Long productId);
 
 }

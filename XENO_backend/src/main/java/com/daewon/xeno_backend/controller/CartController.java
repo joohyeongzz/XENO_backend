@@ -35,8 +35,7 @@ public class CartController {
     private final JWTUtil jwtUtil;
     private final UserRepository userRepository;
 
-    @Value("${org.daewon.upload.path}")
-    private String uploadPath;
+
 
     @PreAuthorize("hasRole('USER')")
     @PostMapping(produces = "application/json")
@@ -200,7 +199,7 @@ public class CartController {
     http://localhost:8090/api/cart
     {
         "userId": 1,
-        "productColorSizeId": 1,
+        "productOptionId": 1,
         "productImageId": 1,
         "quantity": 2
     }

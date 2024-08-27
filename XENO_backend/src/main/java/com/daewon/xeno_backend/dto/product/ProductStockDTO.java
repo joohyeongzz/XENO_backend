@@ -11,8 +11,8 @@ import lombok.NoArgsConstructor;
 @Builder
 public class ProductStockDTO {
 
-    private long productColorId;
-    private long productColorSizeId;
+    private long productId;
+    private long productOptionId;
     private String color;
     private String size;
     private long stock;

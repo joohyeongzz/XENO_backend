@@ -39,22 +39,12 @@ public class OrdersServiceImpl implements OrdersService {
 
     private final UserRepository userRepository;
     private final OrdersRepository ordersRepository;
-    private final ProductsColorSizeRepository productsColorSizeRepository;
+    private final ProductsOptionRepository productsOptionRepository;
     private final ProductsImageRepository productsImageRepository;
     private final ProductsSellerRepository productsSellerRepository;
     private final ReviewRepository reviewRepository;
 
 
-    @Value("${org.daewon.upload.path}")
-    private String uploadPath;
-
-    public byte[] getImage(String uuid, String fileName) throws IOException, java.io.IOException {
-        String filePath = uploadPath + uuid + "_" + fileName;
-        // 파일을 바이트 배열로 읽기
-        Path path = Paths.get(filePath);
-        byte[] image = Files.readAllBytes(path);
-        return image;
-    }
 
 
     @Override
@@ -91,7 +81,7 @@ public class OrdersServiceImpl implements OrdersService {
             Orders orders  = Orders.builder()
                 .orderPayId(orderPayId)
                 .orderNumber(orderNumber)
-                .productsColorSize(findProductColorSize(dto.getProductColorSizeId()))
+                .productsOption(findProductOption(dto.getProductOptionId()))
                 .user(users)
                 .status("결제 완료")
                 .req(dto.getReq())
@@ -152,10 +142,10 @@ public class OrdersServiceImpl implements OrdersService {
         OrdersListDTO ordersListDTO = new OrdersListDTO();
 
         ordersListDTO.setReq(orders.getReq());
-        ordersListDTO.setProductColorSizeId(orders.getProductsColorSize().getProductColorSizeId());
+        ordersListDTO.setProductOptionId(orders.getProductsOption().getProductOptionId());
         ordersListDTO.setOrderNumber(orders.getOrderNumber());
         ordersListDTO.setOrderDate(orders.getCreateAt());
-        ordersListDTO.setBrandName(orders.getProductsColorSize().getProductsColor().getProducts().getBrandName());
+        ordersListDTO.setBrandName(orders.getProductsOption().getProducts().getBrandName());
         ordersListDTO.setStatus(orders.getStatus());
         ordersListDTO.setAmount(orders.getAmount());
         ordersListDTO.setQuantity(orders.getQuantity());
@@ -207,9 +197,9 @@ public class OrdersServiceImpl implements OrdersService {
         return orderPayId.toString();
     }
 
-    private ProductsColorSize findProductColorSize(Long productColorSizeId) {
-        return productsColorSizeRepository.findById(productColorSizeId)
-                .orElseThrow(() -> new EntityNotFoundException("ProductsColorSize not found with id: " + productColorSizeId));
+    private ProductsOption findProductOption(Long productOptionId) {
+        return productsOptionRepository.findById(productOptionId)
+                .orElseThrow(() -> new EntityNotFoundException("ProductsOption not found with id: " + productOptionId));
     }
 
 
@@ -248,22 +238,12 @@ public class OrdersServiceImpl implements OrdersService {
                 dto.setStatus(order.getStatus());
                 dto.setAmount(order.getAmount());
                 dto.setQuantity(order.getQuantity());
-                dto.setColor(order.getProductsColorSize().getProductsColor().getColor());
-                dto.setSize(order.getProductsColorSize().getSize().name());
-                dto.setBrandName(order.getProductsColorSize().getProductsColor().getProducts().getBrandName());
-                dto.setProductName(order.getProductsColorSize().getProductsColor().getProducts().getName());
-                dto.setProductColorId(order.getProductsColorSize().getProductsColor().getProductColorId());
-                ProductsImage productsImage = productsImageRepository.findFirstByProductColorId(order.getProductsColorSize().getProductsColor().getProductColorId());
-                if (productsImage != null) {
-                    try {
-                        byte[] data = getImage(productsImage.getUuid(), productsImage.getFileName());
-                        dto.setProductImage(data);
-                    } catch (java.io.IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                } else {
-                    dto.setProductImage(null);
-                }
+                dto.setColor(order.getProductsOption().getProducts().getColor());
+                dto.setSize(order.getProductsOption().getSize().name());
+                dto.setBrandName(order.getProductsOption().getProducts().getBrandName());
+                dto.setProductName(order.getProductsOption().getProducts().getName());
+                dto.setProductId(order.getProductsOption().getProducts().getProductId());
+
                 dtoList.add(dto);
             }
 
@@ -287,9 +267,9 @@ public class OrdersServiceImpl implements OrdersService {
         Orders orders = ordersRepository.findByOrderIdAndUserId(orderId,users);
         log.info(orders);
         ProductHeaderDTO dto = new ProductHeaderDTO();
-        dto.setProductColorId(orders.getProductsColorSize().getProductsColor().getProductColorId());
-        dto.setName(orders.getProductsColorSize().getProductsColor().getProducts().getName());
-        dto.setColor(orders.getProductsColorSize().getProductsColor().getColor());
+        dto.setProductId(orders.getProductsOption().getProducts().getProductId());
+        dto.setName(orders.getProductsOption().getProducts().getName());
+        dto.setColor(orders.getProductsOption().getProducts().getColor());
 
         return dto;
     }
@@ -297,7 +277,7 @@ public class OrdersServiceImpl implements OrdersService {
     private OrdersDTO convertToDT1(Orders order) {
         return new OrdersDTO(
                 order.getOrderPayId(),
-                order.getProductsColorSize().getProductColorSizeId(),
+                order.getProductsOption().getProductOptionId(),
                 order.getReq(),
                 order.getQuantity(),
                 order.getAmount()
@@ -318,10 +298,10 @@ public class OrdersServiceImpl implements OrdersService {
                 dto.setOrderID(order.getOrderId());
                 dto.setOrderNumber(order.getOrderNumber());
                 dto.setQuantity(order.getQuantity());
-                dto.setSize(order.getProductsColorSize().getSize().name());
-                dto.setColor(order.getProductsColorSize().getProductsColor().getColor());
+                dto.setSize(order.getProductsOption().getSize().name());
+                dto.setColor(order.getProductsOption().getProducts().getColor());
                 dto.setStatus(order.getStatus());
-                dto.setProductName(order.getProductsColorSize().getProductsColor().getProducts().getName());
+                dto.setProductName(order.getProductsOption().getProducts().getName());
                 dto.setOrderDate(order.getCreateAt().format(formatter));
                 dto.setReq(order.getReq());
                 dto.setAmount(order.getAmount());

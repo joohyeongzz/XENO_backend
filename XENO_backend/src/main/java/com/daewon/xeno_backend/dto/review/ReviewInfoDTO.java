@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 public class ReviewInfoDTO {
 
     private Long reviewId;
-    private Long productColorId;
+    private Long productId;
     private String userName;
     private String text;
     private boolean isReview;

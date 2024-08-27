@@ -21,11 +21,10 @@ public class LikeServiceImpl  implements LikeService {
     private final UserRepository userRepository;
     private final LikeRepository likeRepository;
     private final ProductsLikeRepository productsLikeRepository;
-    private final ProductsColorRepository productsColorRepository;
 
 
     @Override
-    public void likeProduct(Long productColorId) {
+    public void likeProduct(Long productId) {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -36,25 +35,25 @@ public class LikeServiceImpl  implements LikeService {
 
         Long userId = users.getUserId();
 
-        ProductsColor productsColor = productsColorRepository.findById(productColorId)
+        Products products = productsRepository.findById(productId)
                 .orElse(null);
 
-        ProductsLike productLike = productsLikeRepository.findByProductColorId(productColorId)
+        ProductsLike productLike = productsLikeRepository.findByProductId(productId)
                 .orElseGet(() -> {
                     ProductsLike newProductsLike = ProductsLike.builder()
-                            .productsColor(productsColor)
+                            .products(products)
                             .build();
                     return productsLikeRepository.save(newProductsLike);
                 });
 
-        if (likeRepository.findByProductColorIdAndUserId(productColorId, userId) == null) {
+        if (likeRepository.findByProductIdAndUserId(productId, userId) == null) {
             productLike.setLikeIndex(productLike.getLikeIndex() + 1);
             productsLikeRepository.save(productLike);
             LikeProducts likeProducts = new LikeProducts(productLike, users);
             likeRepository.save(likeProducts);
             log.info("즐겨찾기");
         } else {
-            LikeProducts likeProducts = likeRepository.findByProductColorIdAndUserId(productColorId, userId);
+            LikeProducts likeProducts = likeRepository.findByProductIdAndUserId(productId, userId);
             likeRepository.delete(likeProducts);
             productLike.setLikeIndex(productLike.getLikeIndex() - 1);
             if(productLike.getLikeIndex() == 0){
