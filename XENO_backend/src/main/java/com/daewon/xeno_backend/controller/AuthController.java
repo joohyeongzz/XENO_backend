@@ -3,10 +3,7 @@ package com.daewon.xeno_backend.controller;
 
 import com.daewon.xeno_backend.domain.RefreshToken;
 import com.daewon.xeno_backend.domain.auth.Users;
-import com.daewon.xeno_backend.dto.auth.AuthSigninDTO;
-import com.daewon.xeno_backend.dto.auth.AuthSignupDTO;
-import com.daewon.xeno_backend.dto.auth.BrandDTO;
-import com.daewon.xeno_backend.dto.auth.SellerInfoCardDTO;
+import com.daewon.xeno_backend.dto.auth.*;
 import com.daewon.xeno_backend.dto.signup.UserRegisterDTO;
 import com.daewon.xeno_backend.repository.RefreshTokenRepository;
 import com.daewon.xeno_backend.security.UsersDetailsService;
@@ -51,16 +48,16 @@ public class AuthController {
 
     @Operation(summary = "회원가입 처리", description = "회원가입 요청을 처리합니다.")
     @PostMapping("/signup")
-    public ResponseEntity<?> signup(@RequestBody @Valid AuthSignupDTO authSignupDTO) {
+    public ResponseEntity<?> signup(@RequestBody @Valid UserSignupDTO userSignupDTO) {
         log.info("signup post.....");
-        log.info(authSignupDTO);
+        log.info(userSignupDTO);
 
         try {
-            Users user = authService.signup(authSignupDTO);
+            Users user = authService.signup(userSignupDTO);
             log.info(user);
             return ResponseEntity.ok("회원가입이 성공적으로 완료되었습니다.");
         } catch (AuthService.UserEmailExistException e) {
-            log.error("Email already exists: " + authSignupDTO.getEmail(), e);
+            log.error("해당 Email이 이미 존재함 : " + userSignupDTO.getEmail(), e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("이미 존재하는 이메일입니다.");
         } catch (Exception e) {
             log.error("회원가입 중 오류 발생", e);
@@ -88,7 +85,7 @@ public class AuthController {
     @PostMapping("/signup/seller")
     public ResponseEntity<?> registerBrand(@RequestBody BrandDTO dto) {
         try {
-            UserRegisterDTO registeredUser = authService.registerBrandUser(dto);
+            UserSignupDTO registeredUser = authService.signupBrand(dto);
             return ResponseEntity.status(201).body("판매사 회원가입 완료");
         } catch (DataIntegrityViolationException e) {
             log.error("Email 중복 됨 : " + dto.getEmail(), e);

@@ -13,5 +13,4 @@ public class BrandSignupDTO {
     private Long brandId;
     private String brandName;
     private String companyId;
-    private Set<String> roleSet;
 }

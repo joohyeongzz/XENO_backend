@@ -34,5 +34,5 @@ public class Brand extends BaseEntity {
     public void addRole(UserRole userRole) {
         this.roleSet.add(userRole);
     }
-    
+
 }

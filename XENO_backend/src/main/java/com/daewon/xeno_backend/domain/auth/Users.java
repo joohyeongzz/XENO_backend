@@ -42,7 +42,7 @@ public class Users extends BaseEntity {
   @JoinColumn(name = "managerId", referencedColumnName = "managerId")
   private Manager manager;
 
-  @OneToOne(fetch = FetchType.LAZY)
+  @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
   @JoinColumn(name = "customerId", referencedColumnName = "customerId")
   private Customer customer;
 

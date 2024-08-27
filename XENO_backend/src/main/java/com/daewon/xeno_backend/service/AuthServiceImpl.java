@@ -1,16 +1,11 @@
 package com.daewon.xeno_backend.service;
 
-import com.daewon.xeno_backend.domain.auth.Brand;
-import com.daewon.xeno_backend.domain.auth.Level;
-import com.daewon.xeno_backend.domain.auth.UserRole;
-import com.daewon.xeno_backend.domain.auth.Users;
-import com.daewon.xeno_backend.dto.auth.AuthSignupDTO;
-import com.daewon.xeno_backend.dto.auth.BrandDTO;
-import com.daewon.xeno_backend.dto.auth.SellerInfoCardDTO;
-import com.daewon.xeno_backend.dto.auth.TokenDTO;
+import com.daewon.xeno_backend.domain.auth.*;
+import com.daewon.xeno_backend.dto.auth.*;
 import com.daewon.xeno_backend.dto.signup.BrandRegisterDTO;
 import com.daewon.xeno_backend.dto.signup.UserRegisterDTO;
 import com.daewon.xeno_backend.repository.BrandRepository;
+import com.daewon.xeno_backend.repository.CustomerRepository;
 import com.daewon.xeno_backend.repository.RefreshTokenRepository;
 import com.daewon.xeno_backend.repository.UserRepository;
 import com.daewon.xeno_backend.utils.JWTUtil;
@@ -21,6 +16,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import javax.transaction.Transactional;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -36,29 +32,59 @@ public class AuthServiceImpl implements AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final JWTUtil jwtUtil;
     private final BrandRepository brandRepository;
+    private final CustomerRepository customerRepository;
 
     @Override
-    public Users signup(AuthSignupDTO authSignupDTO) throws UserEmailExistException {
-        if(userRepository.existsByEmail(authSignupDTO.getEmail())) {
+    @Transactional
+    public Users signup(UserSignupDTO userSignupDTO) throws UserEmailExistException {
+        if(userRepository.existsByEmail(userSignupDTO.getEmail())) {
             throw new UserEmailExistException();
         }
 
-        Users users = modelMapper.map(authSignupDTO, Users.class);
+        // Customer 엔티티를 먼저 생성.
+        Customer customer = Customer.builder()
+                .point(1000)
+                .level(Level.BRONZE)
+                .build();
 
-        users.setPassword(passwordEncoder.encode(authSignupDTO.getPassword()));
-        users.addRole(UserRole.USER);
-        users.addLevel(Level.BRONZE);
+        // Users 엔티티를 생성하고 저장.
+        Users user = Users.builder()
+                .email(userSignupDTO.getEmail())
+                .password(passwordEncoder.encode(userSignupDTO.getPassword()))
+                .name(userSignupDTO.getName())
+                .address(userSignupDTO.getAddress())
+                .phoneNumber(userSignupDTO.getPhoneNumber())
+                .customer(customer)
+                .build();
 
-        log.info("================================");
-        log.info(users);
-        log.info(users.getRoleSet());
+        user.addRole(UserRole.USER);
+        user = userRepository.save(user);
 
-        userRepository.save(users);
-        return users;
+        // Customer에 Users엔티티를 생성할때 할당받은 userId를 설정하고 저장.
+        customer.setUserId(user.getUserId());
+        customerRepository.save(customer);
+
+        return user;
+
+//        Users users = modelMapper.map(userSignupDTO, Users.class);
+//
+//        users.setPassword(passwordEncoder.encode(userSignupDTO.getPassword()));
+//        users.addRole(UserRole.USER);
+//        users.addLevel(Level.BRONZE);
+
+
+//        log.info("================================");
+//        log.info(users);
+//        log.info(customer);
+//
+//        userRepository.save(users);
+//        customerRepository.save(customer);
+//        return users;
     }
 
+    // 판매사 회원가입
     @Override
-    public UserRegisterDTO registerBrandUser(BrandDTO dto) {
+    public UserSignupDTO signupBrand(BrandDTO dto) {
         Brand brand = brandRepository.findByBrandName(dto.getBrandName())
                 .orElseGet(() -> {
                     if (dto.getCompanyId() == null) {
@@ -163,22 +189,19 @@ public class AuthServiceImpl implements AuthService {
         return new TokenDTO(newAccessToken, refreshToken);
     }
 
-    private UserRegisterDTO convertToDTO(Users user) {
-        UserRegisterDTO dto = new UserRegisterDTO();
+    private UserSignupDTO convertToDTO(Users user) {
+        UserSignupDTO dto = new UserSignupDTO();
         dto.setUserId(user.getUserId());
         dto.setEmail(user.getEmail());
         dto.setName(user.getName());
         dto.setAddress(user.getAddress());
         dto.setPhoneNumber(user.getPhoneNumber());
-        dto.setRoleSet(user.getRoleSet().stream().map(Enum::name).collect(Collectors.toSet()));
 
         if (user.getBrand() != null) {
-            BrandRegisterDTO brandDTO = new BrandRegisterDTO();
+            BrandSignupDTO brandDTO = new BrandSignupDTO();
             brandDTO.setBrandId(user.getBrand().getBrandId());
             brandDTO.setBrandName(user.getBrand().getBrandName());
             brandDTO.setCompanyId(user.getBrand().getCompanyId());
-            brandDTO.setRoleSet(user.getBrand().getRoleSet().stream().map(Enum::name).collect(Collectors.toSet()));
-            dto.setBrand(brandDTO);
         }
 
         return dto;
