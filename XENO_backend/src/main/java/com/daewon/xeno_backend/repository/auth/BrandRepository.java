@@ -1,4 +1,4 @@
-package com.daewon.xeno_backend.repository;
+package com.daewon.xeno_backend.repository.auth;
 
 import com.daewon.xeno_backend.domain.auth.Brand;
 import org.springframework.data.jpa.repository.JpaRepository;

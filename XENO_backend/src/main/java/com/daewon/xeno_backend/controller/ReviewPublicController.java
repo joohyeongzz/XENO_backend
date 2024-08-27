@@ -9,7 +9,7 @@ import com.daewon.xeno_backend.dto.review.ReviewUpdateDTO;
 import com.daewon.xeno_backend.repository.ProductsImageRepository;
 import com.daewon.xeno_backend.repository.ReviewImageRepository;
 import com.daewon.xeno_backend.repository.ReviewRepository;
-import com.daewon.xeno_backend.repository.UserRepository;
+import com.daewon.xeno_backend.repository.auth.UserRepository;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.daewon.xeno_backend.dto.review.ReviewCreateDTO;

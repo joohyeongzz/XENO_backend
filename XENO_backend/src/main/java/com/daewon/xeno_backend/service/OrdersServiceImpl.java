@@ -9,6 +9,7 @@ import com.daewon.xeno_backend.dto.page.PageRequestDTO;
 import com.daewon.xeno_backend.dto.product.ProductHeaderDTO;
 import com.daewon.xeno_backend.exception.UserNotFoundException;
 import com.daewon.xeno_backend.repository.*;
+import com.daewon.xeno_backend.repository.auth.UserRepository;
 import io.jsonwebtoken.io.IOException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;

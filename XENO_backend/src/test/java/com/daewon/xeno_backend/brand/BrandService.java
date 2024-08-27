@@ -3,15 +3,12 @@ package com.daewon.xeno_backend.brand;
 import com.daewon.xeno_backend.domain.auth.Brand;
 import com.daewon.xeno_backend.domain.auth.UserRole;
 import com.daewon.xeno_backend.domain.auth.Users;
-import com.daewon.xeno_backend.repository.UserRepository;
+import com.daewon.xeno_backend.repository.auth.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
-import java.util.HashSet;
 
 @SpringBootTest
 @Service

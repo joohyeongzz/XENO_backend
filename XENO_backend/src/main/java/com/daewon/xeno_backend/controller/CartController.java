@@ -6,7 +6,7 @@ import com.daewon.xeno_backend.dto.cart.AddToCartDTO;
 import com.daewon.xeno_backend.dto.cart.CartDTO;
 import com.daewon.xeno_backend.dto.cart.CartSummaryDTO;
 import com.daewon.xeno_backend.dto.cart.CartUpdateDTO;
-import com.daewon.xeno_backend.repository.UserRepository;
+import com.daewon.xeno_backend.repository.auth.UserRepository;
 import com.daewon.xeno_backend.service.CartService;
 import com.daewon.xeno_backend.utils.JWTUtil;
 import io.jsonwebtoken.JwtException;

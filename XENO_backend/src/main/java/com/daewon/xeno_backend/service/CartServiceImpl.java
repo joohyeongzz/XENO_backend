@@ -7,6 +7,7 @@ import com.daewon.xeno_backend.dto.cart.CartDTO;
 import com.daewon.xeno_backend.dto.cart.CartSummaryDTO;
 import com.daewon.xeno_backend.exception.UserNotFoundException;
 import com.daewon.xeno_backend.repository.*;
+import com.daewon.xeno_backend.repository.auth.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;

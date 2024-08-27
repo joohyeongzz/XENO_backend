@@ -11,6 +11,7 @@ import com.daewon.xeno_backend.dto.review.ReviewInfoDTO;
 import com.daewon.xeno_backend.dto.review.ReviewUpdateDTO;
 import com.daewon.xeno_backend.repository.*;
 
+import com.daewon.xeno_backend.repository.auth.UserRepository;
 import io.jsonwebtoken.io.IOException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;

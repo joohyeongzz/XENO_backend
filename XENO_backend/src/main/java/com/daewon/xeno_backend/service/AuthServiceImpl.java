@@ -2,16 +2,13 @@ package com.daewon.xeno_backend.service;
 
 import com.daewon.xeno_backend.domain.auth.*;
 import com.daewon.xeno_backend.dto.auth.*;
-import com.daewon.xeno_backend.dto.signup.BrandRegisterDTO;
-import com.daewon.xeno_backend.dto.signup.UserRegisterDTO;
-import com.daewon.xeno_backend.repository.BrandRepository;
-import com.daewon.xeno_backend.repository.CustomerRepository;
-import com.daewon.xeno_backend.repository.RefreshTokenRepository;
-import com.daewon.xeno_backend.repository.UserRepository;
+import com.daewon.xeno_backend.repository.auth.BrandRepository;
+import com.daewon.xeno_backend.repository.auth.CustomerRepository;
+import com.daewon.xeno_backend.repository.auth.ManagerRepository;
+import com.daewon.xeno_backend.repository.auth.UserRepository;
 import com.daewon.xeno_backend.utils.JWTUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.modelmapper.ModelMapper;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -19,7 +16,6 @@ import org.springframework.stereotype.Service;
 import javax.transaction.Transactional;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Log4j2
 @Service
@@ -27,12 +23,11 @@ import java.util.stream.Collectors;
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
-    private final ModelMapper modelMapper;
     private final PasswordEncoder passwordEncoder;
-    private final RefreshTokenRepository refreshTokenRepository;
     private final JWTUtil jwtUtil;
     private final BrandRepository brandRepository;
     private final CustomerRepository customerRepository;
+    private final ManagerRepository managerRepository;
 
     @Override
     @Transactional
@@ -65,21 +60,6 @@ public class AuthServiceImpl implements AuthService {
         customerRepository.save(customer);
 
         return user;
-
-//        Users users = modelMapper.map(userSignupDTO, Users.class);
-//
-//        users.setPassword(passwordEncoder.encode(userSignupDTO.getPassword()));
-//        users.addRole(UserRole.USER);
-//        users.addLevel(Level.BRONZE);
-
-
-//        log.info("================================");
-//        log.info(users);
-//        log.info(customer);
-//
-//        userRepository.save(users);
-//        customerRepository.save(customer);
-//        return users;
     }
 
     // 판매사 회원가입
@@ -113,29 +93,29 @@ public class AuthServiceImpl implements AuthService {
         return convertToDTO(savedUser);
     }
 
-    // 판매자 회원가입 추가
+    // 관리자 회원가입
     @Override
-    public Users signupSeller(AuthSignupDTO authSignupDTO) throws UserEmailExistException {
-        if(userRepository.existsByEmail(authSignupDTO.getEmail())) {
-            throw new UserEmailExistException();
-        }
-    
-        Users users = modelMapper.map(authSignupDTO, Users.class);
+    public Manager signupManager(UserSignupDTO userSignupDTO) {
+        Manager manager = Manager.builder()
+                .build();
 
-        users.setName(authSignupDTO.getName());  // 명시적으로 이름 설정
-        users.setPassword(passwordEncoder.encode(authSignupDTO.getPassword()));
-        users.addRole(UserRole.SELLER);
-//        users.setCompanyId(authSignupDTO.getCompanyId());
-//        users.setBrandName(authSignupDTO.getBrandName());
-        users.setAddress(authSignupDTO.getAddress());
-        users.setPhoneNumber(authSignupDTO.getPhoneNumber());
-    
-        log.info("================================");
-        log.info(users);
-        log.info(users.getRoleSet());
-    
-        userRepository.save(users);
-        return users;
+        Users user = Users.builder()
+                .email(userSignupDTO.getEmail())
+                .password(passwordEncoder.encode(userSignupDTO.getPassword()))
+                .name(userSignupDTO.getName())
+                .address(userSignupDTO.getAddress())
+                .phoneNumber(userSignupDTO.getPhoneNumber())
+                .manager(manager)
+                .build();
+
+        user.addRole(UserRole.MANAGER);
+        user = userRepository.save(user);
+
+        // Customer에 Users엔티티를 생성할때 할당받은 userId를 설정하고 저장.
+        manager.setUserId(user.getUserId());
+        managerRepository.save(manager);
+
+        return manager;
     }
 
     @Override

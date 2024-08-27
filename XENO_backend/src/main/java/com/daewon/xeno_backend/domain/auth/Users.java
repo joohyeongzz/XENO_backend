@@ -38,7 +38,7 @@ public class Users extends BaseEntity {
   @JoinColumn(name = "brandId", referencedColumnName = "brandId")
   private Brand brand;
 
-  @ManyToOne(fetch = FetchType.LAZY)
+  @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
   @JoinColumn(name = "managerId", referencedColumnName = "managerId")
   private Manager manager;
 
@@ -48,6 +48,7 @@ public class Users extends BaseEntity {
 
   @ElementCollection(fetch = FetchType.LAZY)
   @Builder.Default
+  @Enumerated(EnumType.STRING)
   private Set<UserRole> roleSet = new HashSet<>();
 
   public void addRole(UserRole userRole) {
