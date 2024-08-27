@@ -8,7 +8,7 @@ import com.daewon.xeno_backend.dto.reply.ReplyReadDTO;
 import com.daewon.xeno_backend.dto.reply.ReplyUpdateDTO;
 import com.daewon.xeno_backend.repository.ReplyRepository;
 import com.daewon.xeno_backend.repository.ReviewRepository;
-import com.daewon.xeno_backend.repository.UserRepository;
+import com.daewon.xeno_backend.repository.auth.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;

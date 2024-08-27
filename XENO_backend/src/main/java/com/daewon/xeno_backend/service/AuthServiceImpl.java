@@ -1,21 +1,19 @@
 package com.daewon.xeno_backend.service;
 
-import com.daewon.xeno_backend.domain.auth.Level;
-import com.daewon.xeno_backend.domain.auth.UserRole;
-import com.daewon.xeno_backend.domain.auth.Users;
-import com.daewon.xeno_backend.dto.auth.AuthSignupDTO;
-import com.daewon.xeno_backend.dto.auth.SellerInfoCardDTO;
-import com.daewon.xeno_backend.dto.auth.TokenDTO;
-import com.daewon.xeno_backend.repository.RefreshTokenRepository;
-import com.daewon.xeno_backend.repository.UserRepository;
+import com.daewon.xeno_backend.domain.auth.*;
+import com.daewon.xeno_backend.dto.auth.*;
+import com.daewon.xeno_backend.repository.auth.BrandRepository;
+import com.daewon.xeno_backend.repository.auth.CustomerRepository;
+import com.daewon.xeno_backend.repository.auth.ManagerRepository;
+import com.daewon.xeno_backend.repository.auth.UserRepository;
 import com.daewon.xeno_backend.utils.JWTUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.modelmapper.ModelMapper;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import javax.transaction.Transactional;
 import java.util.Map;
 import java.util.Optional;
 
@@ -25,54 +23,99 @@ import java.util.Optional;
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
-    private final ModelMapper modelMapper;
     private final PasswordEncoder passwordEncoder;
-    private final RefreshTokenRepository refreshTokenRepository;
     private final JWTUtil jwtUtil;
+    private final BrandRepository brandRepository;
+    private final CustomerRepository customerRepository;
+    private final ManagerRepository managerRepository;
 
     @Override
-    public Users signup(AuthSignupDTO authSignupDTO) throws UserEmailExistException {
-        if(userRepository.existsByEmail(authSignupDTO.getEmail())) {
+    @Transactional
+    public Users signup(UserSignupDTO userSignupDTO) throws UserEmailExistException {
+        if(userRepository.existsByEmail(userSignupDTO.getEmail())) {
             throw new UserEmailExistException();
         }
 
-        Users users = modelMapper.map(authSignupDTO, Users.class);
+        // Customer 엔티티를 먼저 생성.
+        Customer customer = Customer.builder()
+                .point(1000)
+                .level(Level.BRONZE)
+                .build();
 
-        users.setPassword(passwordEncoder.encode(authSignupDTO.getPassword()));
-        users.addRole(UserRole.USER);
-        users.addLevel(Level.BRONZE);
+        // Users 엔티티를 생성하고 저장.
+        Users user = Users.builder()
+                .email(userSignupDTO.getEmail())
+                .password(passwordEncoder.encode(userSignupDTO.getPassword()))
+                .name(userSignupDTO.getName())
+                .address(userSignupDTO.getAddress())
+                .phoneNumber(userSignupDTO.getPhoneNumber())
+                .customer(customer)
+                .build();
 
-        log.info("================================");
-        log.info(users);
-        log.info(users.getRoleSet());
+        user.addRole(UserRole.USER);
+        user = userRepository.save(user);
 
-        userRepository.save(users);
-        return users;
+        // Customer에 Users엔티티를 생성할때 할당받은 userId를 설정하고 저장.
+        customer.setUserId(user.getUserId());
+        customerRepository.save(customer);
+
+        return user;
     }
-    
-    // 판매자 회원가입 추가
-    @Override
-    public Users signupSeller(AuthSignupDTO authSignupDTO) throws UserEmailExistException {
-        if(userRepository.existsByEmail(authSignupDTO.getEmail())) {
-            throw new UserEmailExistException();
-        }
-    
-        Users users = modelMapper.map(authSignupDTO, Users.class);
 
-        users.setName(authSignupDTO.getName());  // 명시적으로 이름 설정
-        users.setPassword(passwordEncoder.encode(authSignupDTO.getPassword()));
-        users.addRole(UserRole.SELLER);
-//        users.setCompanyId(authSignupDTO.getCompanyId());
-//        users.setBrandName(authSignupDTO.getBrandName());
-        users.setAddress(authSignupDTO.getAddress());
-        users.setPhoneNumber(authSignupDTO.getPhoneNumber());
-    
-        log.info("================================");
-        log.info(users);
-        log.info(users.getRoleSet());
-    
-        userRepository.save(users);
-        return users;
+    // 판매사 회원가입
+    @Override
+    public UserSignupDTO signupBrand(BrandDTO dto) {
+        Brand brand = brandRepository.findByBrandName(dto.getBrandName())
+                .orElseGet(() -> {
+                    if (dto.getCompanyId() == null) {
+                        throw new IllegalArgumentException("New brand requires a company ID");
+                    }
+                    Brand newBrand = Brand.builder()
+                            .brandName(dto.getBrandName())
+                            .companyId(dto.getCompanyId())
+                            .build();
+                    newBrand.addRole(UserRole.SELLER);
+                    return brandRepository.save(newBrand);
+                });
+
+        Users user = Users.builder()
+                .email(dto.getEmail())
+                .password(passwordEncoder.encode(dto.getPassword()))
+                .name(dto.getName())
+                .address(dto.getAddress())
+                .phoneNumber(dto.getPhoneNumber())
+                .brand(brand)
+                .build();
+        user.addRole(UserRole.SELLER);
+
+        Users savedUser = userRepository.save(user);
+
+        return convertToDTO(savedUser);
+    }
+
+    // 관리자 회원가입
+    @Override
+    public Manager signupManager(UserSignupDTO userSignupDTO) {
+        Manager manager = Manager.builder()
+                .build();
+
+        Users user = Users.builder()
+                .email(userSignupDTO.getEmail())
+                .password(passwordEncoder.encode(userSignupDTO.getPassword()))
+                .name(userSignupDTO.getName())
+                .address(userSignupDTO.getAddress())
+                .phoneNumber(userSignupDTO.getPhoneNumber())
+                .manager(manager)
+                .build();
+
+        user.addRole(UserRole.MANAGER);
+        user = userRepository.save(user);
+
+        // Customer에 Users엔티티를 생성할때 할당받은 userId를 설정하고 저장.
+        manager.setUserId(user.getUserId());
+        managerRepository.save(manager);
+
+        return manager;
     }
 
     @Override
@@ -124,5 +167,23 @@ public class AuthServiceImpl implements AuthService {
         String newAccessToken = jwtUtil.generateToken(Map.of("email", email), 1); // 30분 유효
 
         return new TokenDTO(newAccessToken, refreshToken);
+    }
+
+    private UserSignupDTO convertToDTO(Users user) {
+        UserSignupDTO dto = new UserSignupDTO();
+        dto.setUserId(user.getUserId());
+        dto.setEmail(user.getEmail());
+        dto.setName(user.getName());
+        dto.setAddress(user.getAddress());
+        dto.setPhoneNumber(user.getPhoneNumber());
+
+        if (user.getBrand() != null) {
+            BrandSignupDTO brandDTO = new BrandSignupDTO();
+            brandDTO.setBrandId(user.getBrand().getBrandId());
+            brandDTO.setBrandName(user.getBrand().getBrandName());
+            brandDTO.setCompanyId(user.getBrand().getCompanyId());
+        }
+
+        return dto;
     }
 }
