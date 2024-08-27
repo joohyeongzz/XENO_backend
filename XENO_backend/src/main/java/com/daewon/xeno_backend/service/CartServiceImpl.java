@@ -7,17 +7,15 @@ import com.daewon.xeno_backend.dto.cart.CartDTO;
 import com.daewon.xeno_backend.dto.cart.CartSummaryDTO;
 import com.daewon.xeno_backend.exception.UserNotFoundException;
 import com.daewon.xeno_backend.repository.*;
+import com.daewon.xeno_backend.repository.Products.ProductsImageRepository;
+import com.daewon.xeno_backend.repository.Products.ProductsOptionRepository;
+import com.daewon.xeno_backend.repository.Products.ProductsRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.stream.Collectors;
 

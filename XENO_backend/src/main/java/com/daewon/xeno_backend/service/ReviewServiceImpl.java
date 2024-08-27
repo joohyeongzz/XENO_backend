@@ -11,20 +11,16 @@ import com.daewon.xeno_backend.dto.review.ReviewInfoDTO;
 import com.daewon.xeno_backend.dto.review.ReviewUpdateDTO;
 import com.daewon.xeno_backend.repository.*;
 
-import io.jsonwebtoken.io.IOException;
+import com.daewon.xeno_backend.repository.Products.ProductsImageRepository;
+import com.daewon.xeno_backend.repository.Products.ProductsStarRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
-import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;

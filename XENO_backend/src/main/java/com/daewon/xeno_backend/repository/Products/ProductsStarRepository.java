@@ -1,4 +1,4 @@
-package com.daewon.xeno_backend.repository;
+package com.daewon.xeno_backend.repository.Products;
 
 
 import com.daewon.xeno_backend.domain.ProductsStar;

@@ -1,7 +1,7 @@
  package com.daewon.xeno_backend.controller;
 
 
- import com.daewon.xeno_backend.repository.ProductsLikeRepository;
+ import com.daewon.xeno_backend.repository.Products.ProductsLikeRepository;
  import com.daewon.xeno_backend.service.LikeService;
  import io.swagger.v3.oas.annotations.Operation;
  import lombok.RequiredArgsConstructor;

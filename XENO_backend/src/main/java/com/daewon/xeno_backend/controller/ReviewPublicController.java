@@ -6,7 +6,7 @@ import com.daewon.xeno_backend.dto.page.PageResponseDTO;
 import com.daewon.xeno_backend.dto.review.ReviewCardDTO;
 import com.daewon.xeno_backend.dto.review.ReviewInfoDTO;
 import com.daewon.xeno_backend.dto.review.ReviewUpdateDTO;
-import com.daewon.xeno_backend.repository.ProductsImageRepository;
+import com.daewon.xeno_backend.repository.Products.ProductsImageRepository;
 import com.daewon.xeno_backend.repository.ReviewImageRepository;
 import com.daewon.xeno_backend.repository.ReviewRepository;
 import com.daewon.xeno_backend.repository.UserRepository;

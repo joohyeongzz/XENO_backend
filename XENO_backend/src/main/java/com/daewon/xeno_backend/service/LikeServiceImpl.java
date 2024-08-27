@@ -3,6 +3,8 @@ package com.daewon.xeno_backend.service;
 import com.daewon.xeno_backend.domain.*;
 import com.daewon.xeno_backend.domain.auth.Users;
 import com.daewon.xeno_backend.repository.*;
+import com.daewon.xeno_backend.repository.Products.ProductsLikeRepository;
+import com.daewon.xeno_backend.repository.Products.ProductsRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.security.core.Authentication;

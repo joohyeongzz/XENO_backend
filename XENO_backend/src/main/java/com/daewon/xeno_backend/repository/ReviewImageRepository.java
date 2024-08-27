@@ -18,4 +18,6 @@ public interface ReviewImageRepository extends JpaRepository<ReviewImage, Long> 
     @Query("DELETE FROM ReviewImage r WHERE r.review.reviewId = :reviewId")
     void deleteByReviewId(Long reviewId);
 
+
+
 }
