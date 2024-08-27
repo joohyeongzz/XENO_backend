@@ -40,9 +40,8 @@ public class Products {
 
   private String season;
 
-//  // ProductsColor와의 연관 관계 설정
-//  @OneToMany(mappedBy = "products", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-//  private List<ProductsColor> colors = new ArrayList<>();
+  private String color;
+
 
   public boolean getIsSale() {
     return isSale;

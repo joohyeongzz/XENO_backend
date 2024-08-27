@@ -26,9 +26,9 @@ public class Cart {
     private Users user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "productColorSizeId",  referencedColumnName = "productColorSizeId", nullable = false)
+    @JoinColumn(name = "productOptionId",  referencedColumnName = "productOptionId", nullable = false)
     @OnDelete(action = OnDeleteAction.CASCADE)
-    private ProductsColorSize productsColorSize;
+    private ProductsOption productsOption;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "productImageId")
@@ -45,9 +45,9 @@ public class Cart {
 //    @Column(name = "selected")
 //    private boolean selected = true;   // 선택 여부
 
-//    public Cart(Users user, ProductsColorSize productsColorSize, ProductsImage productsImage, Long quantity, Long price) {
+//    public Cart(Users user, ProductsOption productsOption, ProductsImage productsImage, Long quantity, Long price) {
 //        this.user = user;
-//        this.productsColorSize = productsColorSize;
+//        this.productsOption = productsOption;
 //        this.productsImage = productsImage;
 //        this.quantity = quantity;
 //        this.price = price;

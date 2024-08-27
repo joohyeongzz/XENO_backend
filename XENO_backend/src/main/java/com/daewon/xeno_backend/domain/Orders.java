@@ -25,9 +25,9 @@ public class Orders extends BaseEntity {
   private String orderPayId;
 
   @ManyToOne()  // fetch = FetchType.LAZY
-  @JoinColumn(name = "productColorSizeId", referencedColumnName = "productColorSizeId")
+  @JoinColumn(name = "productOptionId", referencedColumnName = "productOptionId")
   @OnDelete(action = OnDeleteAction.CASCADE)
-  private ProductsColorSize productsColorSize;
+  private ProductsOption productsOption;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "userId", referencedColumnName = "userId")
