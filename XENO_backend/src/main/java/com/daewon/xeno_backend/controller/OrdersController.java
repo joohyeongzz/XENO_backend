@@ -1,10 +1,13 @@
 package com.daewon.xeno_backend.controller;
 
+import com.daewon.xeno_backend.domain.auth.Customer;
 import com.daewon.xeno_backend.dto.auth.AuthSigninDTO;
 import com.daewon.xeno_backend.dto.order.*;
 import com.daewon.xeno_backend.dto.page.PageInfinityResponseDTO;
 import com.daewon.xeno_backend.dto.page.PageRequestDTO;
 import com.daewon.xeno_backend.exception.UserNotFoundException;
+import com.daewon.xeno_backend.repository.auth.CustomerRepository;
+import com.daewon.xeno_backend.repository.auth.UserRepository;
 import com.daewon.xeno_backend.service.OrdersService;
 import com.daewon.xeno_backend.utils.JWTUtil;
 import io.jsonwebtoken.JwtException;
@@ -25,11 +28,14 @@ import java.util.Map;
 @RestController
 @Log4j2
 @RequiredArgsConstructor
-@RequestMapping("/api/orders")
+//@RequestMapping("/api/orders")
+@RequestMapping("/orders")
 public class OrdersController {
 
     private final OrdersService ordersService;
     private final JWTUtil jwtUtil;
+    private final CustomerRepository customerRepository;
+    private final UserRepository userRepository;
 
     @GetMapping
     public ResponseEntity<?> getAllOrders(@RequestHeader("Authorization") String token) {
@@ -67,9 +73,31 @@ public class OrdersController {
 
     @PostMapping(produces = "application/json")
     public ResponseEntity<?> createOrder(@RequestBody List<OrdersDTO> ordersDTO,
+                                         @RequestBody OrdersCreateDTO ordersCreateDTO,
                                          @AuthenticationPrincipal UserDetails userDetails) {
         try {
             String userEmail = userDetails.getUsername();
+
+            Customer customer = customerRepository.findByUserId(userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UserNotFoundException("User not found")).getUserId())
+                .orElseThrow(() -> new UserNotFoundException("Customer not found"));
+
+            // 적립금 사용 로직
+            int usedPoint = ordersCreateDTO.getUsedPoint();
+            if (usedPoint > customer.getPoint()) {
+                return ResponseEntity.badRequest().body("사용 가능한 포인트가 초과했습니다.");
+            }
+
+            // 적립금 차감
+            customer.setPoint(customer.getPoint() - usedPoint);
+            customerRepository.save(customer);
+
+            // 주문 금액에서 적립금 차감
+            // long totalAmount = ordersCreateDTO.getAmount() - usedPoint;
+
+            List<OrdersDTO> ordersDTOList = ordersCreateDTO.getOrdersList();
+            ordersDTOList.forEach(dto -> dto.setAmount(dto.getAmount() - (usedPoint * dto.getAmount() / ordersCreateDTO.getAmount())));
+
             List<OrdersDTO> createdOrder = ordersService.createOrders(ordersDTO, userEmail);
             return ResponseEntity.ok(createdOrder);
         } catch (Exception e) {
@@ -157,16 +185,6 @@ public class OrdersController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
-
-
-
-
-
-
-
-
-
-
 
 }
 

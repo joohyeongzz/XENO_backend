@@ -1,6 +1,8 @@
 package com.daewon.xeno_backend.service;
 
 import com.daewon.xeno_backend.domain.*;
+import com.daewon.xeno_backend.domain.auth.Customer;
+import com.daewon.xeno_backend.domain.auth.Level;
 import com.daewon.xeno_backend.domain.auth.Users;
 import com.daewon.xeno_backend.dto.auth.GetOneDTO;
 import com.daewon.xeno_backend.dto.order.*;
@@ -9,6 +11,7 @@ import com.daewon.xeno_backend.dto.page.PageRequestDTO;
 import com.daewon.xeno_backend.dto.product.ProductHeaderDTO;
 import com.daewon.xeno_backend.exception.UserNotFoundException;
 import com.daewon.xeno_backend.repository.*;
+import com.daewon.xeno_backend.repository.auth.CustomerRepository;
 import com.daewon.xeno_backend.repository.auth.UserRepository;
 import io.jsonwebtoken.io.IOException;
 import jakarta.persistence.EntityNotFoundException;
@@ -43,9 +46,7 @@ public class OrdersServiceImpl implements OrdersService {
     private final ProductsImageRepository productsImageRepository;
     private final ProductsSellerRepository productsSellerRepository;
     private final ReviewRepository reviewRepository;
-
-
-
+    private final CustomerRepository customerRepository;
 
     @Override
     public List<OrdersListDTO> getAllOrders(Long userId) {
@@ -89,6 +90,18 @@ public class OrdersServiceImpl implements OrdersService {
                 .amount(dto.getAmount())
                 .build();
             savedOrders.add(ordersRepository.save(orders));
+
+            // 적립금 계산 및 저장 로직 추가
+            int point = (int) (dto.getAmount() * 0.01); // 1% 적립
+            Customer customer = (Customer) customerRepository.findByUserId(users.getUserId())
+                    .orElseGet(() -> Customer.builder()
+                            .userId(users.getUserId())
+                            .point(0)
+                            .level(Level.BRONZE)
+                            .build());
+            customer.setPoint(customer.getPoint() + point);
+            customerRepository.save(customer);
+
         }
 
         // 저장된 주문들을 DTO로 변환하여 반환
@@ -152,14 +165,16 @@ public class OrdersServiceImpl implements OrdersService {
 
         // GetOneDTO 리스트 생성 및 설정
         List<GetOneDTO> getOneList = new ArrayList<>();
-        getOneList.add(createGetOneDTO(orders.getUser()));
+        Customer customer = customerRepository.findByUserId(orders.getUser().getUserId())
+                    .orElseThrow(() -> new UserNotFoundException("User not found"));
+        getOneList.add(createGetOneDTO(orders.getUser(), customer));
         ordersListDTO.setGetOne(getOneList);
 
         return ordersListDTO;
     }
 
-    private GetOneDTO createGetOneDTO(Users users) {
-        return new GetOneDTO(users.getPhoneNumber(), users.getAddress());
+    private GetOneDTO createGetOneDTO(Users users, Customer customer) {
+        return new GetOneDTO(users.getPhoneNumber(), users.getAddress(), customer.getPoint());
     }
 
     // 주문번호 orderNumber 랜덤생성
@@ -324,7 +339,7 @@ public class OrdersServiceImpl implements OrdersService {
 
         log.info(orders);
 
-
-
     }
+
+
 }
