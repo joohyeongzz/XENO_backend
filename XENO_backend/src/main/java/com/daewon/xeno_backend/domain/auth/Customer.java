@@ -1,5 +1,6 @@
 package com.daewon.xeno_backend.domain.auth;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.OnDelete;
@@ -15,13 +16,15 @@ import org.hibernate.annotations.OnDeleteAction;
 public class Customer {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long customerId;
 
-    @OneToOne(mappedBy = "customer", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    private Users user;
+    // 사용자 ID를 직접 저장
+    @Column(name = "userId")
+    private Long userId;
 
     // 적립금
-    private Long point;
+    private int point;
 
     // 유저 등급
     @Enumerated(EnumType.STRING)

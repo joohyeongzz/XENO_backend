@@ -2,6 +2,7 @@ package com.daewon.xeno_backend.domain.auth;
 
 
 import com.daewon.xeno_backend.domain.BaseEntity;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -33,20 +34,21 @@ public class Users extends BaseEntity {
 
   private String phoneNumber;
 
-  @ManyToOne(fetch = FetchType.LAZY)
+  @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
   @JoinColumn(name = "brandId", referencedColumnName = "brandId")
   private Brand brand;
 
-  @ManyToOne(fetch = FetchType.LAZY)
+  @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
   @JoinColumn(name = "managerId", referencedColumnName = "managerId")
   private Manager manager;
 
-  @OneToOne(fetch = FetchType.LAZY)
+  @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
   @JoinColumn(name = "customerId", referencedColumnName = "customerId")
   private Customer customer;
 
   @ElementCollection(fetch = FetchType.LAZY)
   @Builder.Default
+  @Enumerated(EnumType.STRING)
   private Set<UserRole> roleSet = new HashSet<>();
 
   public void addRole(UserRole userRole) {

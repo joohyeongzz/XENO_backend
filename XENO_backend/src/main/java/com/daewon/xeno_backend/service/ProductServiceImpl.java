@@ -9,6 +9,7 @@ import com.daewon.xeno_backend.dto.page.PageRequestDTO;
 import com.daewon.xeno_backend.dto.page.PageResponseDTO;
 import com.daewon.xeno_backend.dto.product.*;
 import com.daewon.xeno_backend.repository.*;
+import com.daewon.xeno_backend.repository.auth.UserRepository;
 import com.daewon.xeno_backend.security.exception.ProductNotFoundException;
 
 import com.daewon.xeno_backend.utils.CategoryUtils;

@@ -18,10 +18,11 @@ import java.util.Set;
 public class Manager {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long managerId;
 
-    @OneToMany(mappedBy = "manager", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    private Set<Users> user = new HashSet<>();
+    @Column(name = "userId")
+    private Long userId;
 
     @ElementCollection(fetch = FetchType.LAZY)
     @Builder.Default
