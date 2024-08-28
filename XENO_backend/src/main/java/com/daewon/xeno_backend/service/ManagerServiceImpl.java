@@ -4,6 +4,7 @@ import com.daewon.xeno_backend.domain.auth.Customer;
 import com.daewon.xeno_backend.domain.auth.Level;
 import com.daewon.xeno_backend.domain.auth.UserRole;
 import com.daewon.xeno_backend.domain.auth.Users;
+import com.daewon.xeno_backend.dto.manager.PointUpdateDTO;
 import com.daewon.xeno_backend.exception.UnauthorizedException;
 import com.daewon.xeno_backend.exception.UserNotFoundException;
 import com.daewon.xeno_backend.repository.auth.CustomerRepository;
@@ -53,20 +54,24 @@ public class ManagerServiceImpl implements ManagerService {
 
     @Transactional
     @Override
-    public void updateUserPointByManager(String managerEmail, Long userId, int pointsChange) throws UserNotFoundException, UnauthorizedException {
+    public void updateUserPointByManager(String managerEmail, Long userId, int newPoint) throws UserNotFoundException, UnauthorizedException {
         // Manager가 맞는지 검증
         Users manager = validateManager(managerEmail);
         Users user = getUserById(userId);
 
-        log.info("Manager {} 가 userId {} 의 포인트를 조정중입니다.", managerEmail, userId);
+        log.info("Manager {} 가 userId {} 의 포인트를 {} 로 조정중입니다.", managerEmail, userId, newPoint);
         Customer customer = user.getCustomer();
+        log.info("targetCustomer : " + customer);
         if (customer == null) {
             throw new UserNotFoundException("userId에 해당하는 Customer Data를 찾지 못했습니다. userId : " + userId);
         }
+
         // 현재 userId에 해당하는 point에서 + manager가 추가한 point값
-        customer.setPoint(customer.getPoint() + pointsChange);
+        // 포인트 음수 방지
+        int updatedPoint = Math.max(0, newPoint);
+        customer.setPoint(updatedPoint);
         customerRepository.save(customer);
-        log.info("userId {} 의 point가 해당 {} manager에 의해 조정 되었습니다.", userId, managerEmail);
+        log.info("userId {} 의 point가 {} 로 해당 {} manager에 의해 조정 되었습니다.", userId, updatedPoint, managerEmail);
     }
 
     @Transactional

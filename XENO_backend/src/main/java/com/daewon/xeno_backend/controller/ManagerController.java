@@ -3,6 +3,8 @@ package com.daewon.xeno_backend.controller;
 import com.daewon.xeno_backend.domain.auth.Level;
 import com.daewon.xeno_backend.domain.auth.UserRole;
 import com.daewon.xeno_backend.dto.manager.LevelUpdateDTO;
+import com.daewon.xeno_backend.dto.manager.PointUpdateDTO;
+import com.daewon.xeno_backend.exception.InvalidPointException;
 import com.daewon.xeno_backend.exception.UnauthorizedException;
 import com.daewon.xeno_backend.exception.UserNotFoundException;
 import com.daewon.xeno_backend.service.AuthService;
@@ -93,15 +95,25 @@ public class ManagerController {
     @PutMapping("/point/{targetUserId}")
     public ResponseEntity<String> updateUserPoint(Authentication authentication,
                                                   @RequestHeader("Authorization") String token,
-                                                  @RequestParam int pointsChange,
+                                                  @RequestBody PointUpdateDTO pointUpdateDto,
                                                   @PathVariable Long targetUserId) {
         try {
             String currentToken = token.replace("Bearer ", "");
             Map<String, Object> claims = jwtUtil.validateToken(currentToken);
             String managerEmail = claims.get("email").toString();
 
-            managerService.updateUserPointByManager(managerEmail, targetUserId, pointsChange);
-            return ResponseEntity.ok("manager에 의해 user에 point가 정상적으로 조정되었습니다.");
+            int newPoints = pointUpdateDto.getPointChange();
+
+            // point 값 검증
+            if (newPoints < 0) {
+                throw new InvalidPointException("포인트 값은 음수일 수 없습니다.");
+            }
+            if (newPoints > Integer.MAX_VALUE) {
+                throw new InvalidPointException("포인트 값이 허용 범위를 초과했습니다.");
+            }
+
+            managerService.updateUserPointByManager(managerEmail, targetUserId, newPoints);
+            return ResponseEntity.ok(String.format("Manager에 의해 user(ID: %d)의 포인트가 %d로 설정되었습니다.", targetUserId, newPoints));
         } catch (JwtException e) {
             log.error("JWT 토큰 처리 중 오류 발생", e);
             return ResponseEntity.status(401).body("토큰이 만료됐거나 유효하지 않음");
