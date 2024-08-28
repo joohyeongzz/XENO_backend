@@ -9,6 +9,7 @@ import com.daewon.xeno_backend.utils.JWTUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -32,6 +33,7 @@ public class SellerController {
     private final PlatformTransactionManager transactionManager;
 
     // brand 탈퇴 메서드
+    @PreAuthorize("hasRole('SELLER, MANAGER')")
     @DeleteMapping("/delete")
     public ResponseEntity<String> deleteBrand(Authentication authentication) {
         log.info("브랜드 삭제 요청 받음. 이메일: {}", authentication.getName());
