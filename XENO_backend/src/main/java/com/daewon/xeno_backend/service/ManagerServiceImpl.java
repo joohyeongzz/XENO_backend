@@ -1,5 +1,6 @@
 package com.daewon.xeno_backend.service;
 
+import com.daewon.xeno_backend.domain.auth.Customer;
 import com.daewon.xeno_backend.domain.auth.Level;
 import com.daewon.xeno_backend.domain.auth.UserRole;
 import com.daewon.xeno_backend.domain.auth.Users;
@@ -50,14 +51,39 @@ public class ManagerServiceImpl implements ManagerService {
         log.info("userId {} 의 role값이 Manager {} 의하여 변경 됐습니다.", userId, managerEmail);
     }
 
+    @Transactional
     @Override
     public void updateUserPointByManager(String managerEmail, Long userId, int pointsChange) throws UserNotFoundException, UnauthorizedException {
+        // Manager가 맞는지 검증
+        Users manager = validateManager(managerEmail);
+        Users user = getUserById(userId);
 
+        log.info("Manager {} 가 userId {} 의 포인트를 조정중입니다.", managerEmail, userId);
+        Customer customer = user.getCustomer();
+        if (customer == null) {
+            throw new UserNotFoundException("userId에 해당하는 Customer Data를 찾지 못했습니다. userId : " + userId);
+        }
+        // 현재 userId에 해당하는 point에서 + manager가 추가한 point값
+        customer.setPoint(customer.getPoint() + pointsChange);
+        customerRepository.save(customer);
+        log.info("userId {} 의 point가 해당 {} manager에 의해 조정 되었습니다.", userId, managerEmail);
     }
 
+    @Transactional
     @Override
     public void updateUserLevelByManager(String managerEmail, Long userId, Level newLevel) throws UserNotFoundException, UnauthorizedException {
+        // Manager가 맞는지 검증
+        Users manager = validateManager(managerEmail);
+        Users user = getUserById(userId);
 
+        log.info("Manager {} 가 해당하는 userId {} 의 등급을 조정중입니다.", managerEmail, userId);
+        Customer customer = user.getCustomer();
+        if (customer == null) {
+            throw new UserNotFoundException("userId에 해당하는 Customer Data를 찾지 못했습니다. userId : " + userId);
+        }
+        customer.setLevel(newLevel);
+        customerRepository.save(customer);
+        log.info("userId {} 의 등급이 해당 {} manager에 의해 조정 되었습니다.", userId, managerEmail);
     }
 
     // Manager인지 검증하는 메서드

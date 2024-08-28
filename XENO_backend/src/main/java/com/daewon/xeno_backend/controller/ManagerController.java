@@ -1,6 +1,8 @@
 package com.daewon.xeno_backend.controller;
 
+import com.daewon.xeno_backend.domain.auth.Level;
 import com.daewon.xeno_backend.domain.auth.UserRole;
+import com.daewon.xeno_backend.dto.manager.LevelUpdateDTO;
 import com.daewon.xeno_backend.exception.UnauthorizedException;
 import com.daewon.xeno_backend.exception.UserNotFoundException;
 import com.daewon.xeno_backend.service.AuthService;
@@ -10,9 +12,11 @@ import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
 
@@ -26,6 +30,7 @@ public class ManagerController {
     private final ManagerService managerService;
     private final JWTUtil jwtUtil;
 
+    @PreAuthorize("hasRole('MANAGER')")
     @DeleteMapping("/userDelete/{targetUserId}")
     public ResponseEntity<?> deleteUser(Authentication authentication, @RequestHeader("Authorization") String token,
                                         @PathVariable Long targetUserId) {
@@ -55,6 +60,7 @@ public class ManagerController {
         }
     }
 
+    @PreAuthorize("hasRole('MANAGER')")
     @PutMapping("/roles/{targetUserId}")
     public ResponseEntity<String> updateUserRoles(Authentication authentication,
                                                   @RequestHeader("Authorization") String token,
@@ -83,4 +89,73 @@ public class ManagerController {
         }
     }
 
+    @PreAuthorize("hasRole('MANAGER')")
+    @PutMapping("/point/{targetUserId}")
+    public ResponseEntity<String> updateUserPoint(Authentication authentication,
+                                                  @RequestHeader("Authorization") String token,
+                                                  @RequestParam int pointsChange,
+                                                  @PathVariable Long targetUserId) {
+        try {
+            String currentToken = token.replace("Bearer ", "");
+            Map<String, Object> claims = jwtUtil.validateToken(currentToken);
+            String managerEmail = claims.get("email").toString();
+
+            managerService.updateUserPointByManager(managerEmail, targetUserId, pointsChange);
+            return ResponseEntity.ok("manager에 의해 user에 point가 정상적으로 조정되었습니다.");
+        } catch (JwtException e) {
+            log.error("JWT 토큰 처리 중 오류 발생", e);
+            return ResponseEntity.status(401).body("토큰이 만료됐거나 유효하지 않음");
+        } catch (UserNotFoundException e) {
+            log.warn("사용자를 찾을 수 없음: {}", e.getMessage());
+            return ResponseEntity.status(404).body(e.getMessage());
+        } catch (UnauthorizedException e) {
+            log.warn("권한 없는 작업 시도: {}", e.getMessage());
+            return ResponseEntity.status(403).body(e.getMessage());
+        } catch (Exception e) {
+            log.error("사용자 포인트 업데이트 중 오류 발생", e);
+            return ResponseEntity.status(500)
+                    .body("user point 조정 실패 : " + e.getMessage());
+        }
+    }
+    @PreAuthorize("hasRole('MANAGER')")
+    @PutMapping("/level/{targetUserId}")
+    public ResponseEntity<String> updateUserLevel(Authentication authentication,
+                                                  @RequestHeader("Authorization") String token,
+                                                  @RequestBody LevelUpdateDTO levelUpdateDTO,
+                                                  @PathVariable Long targetUserId) {
+        try {
+            String currentToken = token.replace("Bearer ", "");
+            Map<String, Object> claims = jwtUtil.validateToken(currentToken);
+            String managerEmail = claims.get("email").toString();
+
+            // 새로운 level 값을 String 형태로
+            String newLevelString = levelUpdateDTO.getNewLevel();
+            // 새로운 level enum 값
+            Level newLevel;
+
+            try {
+                // enum에 들어있는 값이 대문자로 이루어졌기 때문에 toUpperCase() 사용
+                newLevel = Level.valueOf(newLevelString.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                log.warn("잘못된 Level 값이 입력됨 : {}", newLevelString);
+                return ResponseEntity.status(404).body("잘못된 level 값입니다. 허용된 값: " + Arrays.toString(Level.values()));
+            }
+
+            managerService.updateUserLevelByManager(managerEmail, targetUserId, newLevel);
+            return ResponseEntity.ok("Manager에 의해 user의 level이 정상적으로 변경되었습니다.");
+        } catch (JwtException e) {
+            log.error("JWT 토큰 처리 중 오류 발생", e);
+            return ResponseEntity.status(401).body("토큰이 만료됐거나 유효하지 않음");
+        } catch (UserNotFoundException e) {
+            log.warn("사용자를 찾을 수 없음: {}", e.getMessage());
+            return ResponseEntity.status(404).body(e.getMessage());
+        } catch (UnauthorizedException e) {
+            log.warn("권한 없는 작업 시도: {}", e.getMessage());
+            return ResponseEntity.status(403).body(e.getMessage());
+        } catch (Exception e) {
+            log.error("사용자 포인트 업데이트 중 오류 발생", e);
+            return ResponseEntity.status(500)
+                    .body("user level 변경 실패 : " + e.getMessage());
+        }
+    }
 }
