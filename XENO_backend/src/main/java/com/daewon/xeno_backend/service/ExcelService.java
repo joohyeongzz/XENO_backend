@@ -30,7 +30,26 @@ public class ExcelService {
                 ProductRegisterDTO product = new ProductRegisterDTO();
                 log.info(rowIndex+"번쨰"+row.getCell(0));
 
-                product.setProductNumber(row.getCell(0).getStringCellValue());
+                Cell cell = row.getCell(0); // Assuming column 0 for Product Number
+                String productNumber = "";
+
+                if (cell != null) {
+                    switch (cell.getCellType()) {
+                        case STRING:
+                            productNumber = cell.getStringCellValue();
+                            break;
+                        case NUMERIC:
+                            // Convert numeric value to string
+                            productNumber = String.valueOf((int) cell.getNumericCellValue());
+                            break;
+                        default:
+                            // Handle other types if necessary, or set a default value
+                            productNumber = "";
+                            break;
+                    }
+                }
+
+                product.setProductNumber(productNumber);
                 product.setName(row.getCell(1).getStringCellValue());
                 product.setCategory(row.getCell(2).getStringCellValue());
                 product.setCategorySub(row.getCell(3).getStringCellValue());
@@ -40,34 +59,27 @@ public class ExcelService {
 
                 product.setColors(row.getCell(6).getStringCellValue());
 
-                long sStock = (long) row.getCell(7).getNumericCellValue(); // S재고
-                long mStock = (long) row.getCell(8).getNumericCellValue(); // M재고
-                long lStock = (long) row.getCell(9).getNumericCellValue(); // L재고
-                long xlStock = (long) row.getCell(10).getNumericCellValue(); // XL재고
+                String sizeString = getCellValue(row.getCell(7)); // Comma-separated sizes
+                String stockString = getCellValue(row.getCell(8)); // Comma-separated stocks
 
-                List<ProductSizeDTO> sizeList = new ArrayList<>();
-                if (sStock > 0) {
-                    sizeList.add(new ProductSizeDTO("S", sStock));
-                }
-                if (mStock > 0) {
-                    sizeList.add(new ProductSizeDTO("M", mStock));
-                }
-                if (lStock > 0) {
-                    sizeList.add(new ProductSizeDTO("L", lStock));
-                }
-                if (xlStock > 0) {
-                    sizeList.add(new ProductSizeDTO("XL", xlStock));
-                }
+                String[] sizes = sizeString.split(",");
+                String[] stocks = stockString.split(",");
 
-                // Set the size list to the product
-                product.setSize(sizeList);
+                List<ProductSizeDTO> sizeDTOs = new ArrayList<>();
+                for (int i = 0; i < sizes.length; i++) {
+                    ProductSizeDTO sizeDTO = new ProductSizeDTO();
+                    sizeDTO.setSize(sizes[i].trim());
+                    sizeDTO.setStock(Integer.parseInt(stocks[i].trim()));
+                    sizeDTOs.add(sizeDTO);
+                }
+                product.setSize(sizeDTOs);
 
-                product.setUrl_1(row.getCell(11).getStringCellValue());
-                Cell cell12 = row.getCell(12);
-                Cell cell13 = row.getCell(13);
-                Cell cell14 = row.getCell(14);
-                Cell cell15 = row.getCell(15);
-                Cell cell16 = row.getCell(16);
+                product.setUrl_1(row.getCell(9).getStringCellValue());
+                Cell cell12 = row.getCell(10);
+                Cell cell13 = row.getCell(11);
+                Cell cell14 = row.getCell(12);
+                Cell cell15 = row.getCell(13);
+                Cell cell16 = row.getCell(14);
 
 // 각 셀의 값을 안전하게 읽어오기
                 String url2 = (cell12 != null) ? cell12.getStringCellValue() : null;
@@ -82,8 +94,8 @@ public class ExcelService {
                 product.setUrl_4(url4);
                 product.setUrl_5(url5);
                 product.setUrl_6(url6);
-                product.setDetail_url(row.getCell(17).getStringCellValue());
-                product.setSeason(row.getCell(18).getStringCellValue());
+                product.setDetail_url(row.getCell(15).getStringCellValue());
+                product.setSeason(row.getCell(16).getStringCellValue());
 
                 productList.add(product);
             }
@@ -91,5 +103,17 @@ public class ExcelService {
 
         return productList;
     }
+
+    private String getCellValue(Cell cell) {
+        switch (cell.getCellType()) {
+            case STRING:
+                return cell.getStringCellValue();
+            case NUMERIC:
+                return String.valueOf(cell.getNumericCellValue());
+            default:
+                return "";
+        }
+    }
 }
+
 

@@ -216,7 +216,7 @@ public class ProductServiceImpl implements ProductService {
                 if (existingProduct == null) {
                     Products newProduct = Products.builder()
                             .name(dto.getName())
-                            .brandName("ASD")
+                            .brandName(users.getBrand().getBrandName())
                             .category(dto.getCategory())
                             .categorySub(dto.getCategorySub())
                             .price(dto.getPrice())
@@ -236,7 +236,7 @@ public class ProductServiceImpl implements ProductService {
                     for(ProductSizeDTO size: dto.getSize()){
                         ProductsOption productsOption = ProductsOption.builder()
                                 .products(newProduct)
-                                .size(Size.valueOf(size.getSize()))
+                                .size(size.getSize())
                                 .stock(size.getStock())
                                 .build();
                         productsOptionRepository.save(productsOption);
@@ -291,7 +291,7 @@ public class ProductServiceImpl implements ProductService {
                         productsImageRepository.save(image);
 
                     } else {
-                        throw new IllegalStateException("UploadImage not found. Operation cancelled.");
+                        throw new IllegalStateException("품번이 맞지 않습니다.");
                     }
                 } else {
                     existingProduct.setName(dto.getName());
@@ -306,17 +306,17 @@ public class ProductServiceImpl implements ProductService {
                     productsRepository.save(existingProduct);
                     List<ProductsOption> productsColorSizes = productsOptionRepository.findByProductId(existingProduct.getProductId());
                     // 엑셀에서 가져온 사이즈 목록
-                    Set<Size> sizesFromExcel = dto.getSize().stream()
-                            .map(sizeDTO -> Size.valueOf(sizeDTO.getSize()))
+                    Set<String> sizesFromExcel = dto.getSize().stream()
+                            .map(sizeDTO -> sizeDTO.getSize())
                             .collect(Collectors.toSet());
 
                     // 기존 사이즈 목록을 사이즈 이름으로 매핑
-                    Map<Size, ProductsOption> existingColorSizeMap = productsColorSizes.stream()
+                    Map<String, ProductsOption> existingColorSizeMap = productsColorSizes.stream()
                             .collect(Collectors.toMap(ProductsOption::getSize, colorSize -> colorSize));
 
                     // 엑셀에서 가져온 사이즈를 기반으로 업데이트 및 추가 작업
                     for (ProductSizeDTO sizeDTO : dto.getSize()) {
-                        Size size = Size.valueOf(sizeDTO.getSize());
+                        String size =sizeDTO.getSize();
                         ProductsOption existingColorSize = existingColorSizeMap.get(size);
 
                         if (existingColorSize == null) {
@@ -530,7 +530,7 @@ public class ProductServiceImpl implements ProductService {
                     stockDTO.setProductId(pcs.getProducts().getProductId());
                     stockDTO.setProductOptionId(pcs.getProductOptionId());
                     stockDTO.setColor(pcs.getProducts().getColor());
-                    stockDTO.setSize(pcs != null ? pcs.getSize().name() : "에러");
+                    stockDTO.setSize(pcs != null ? pcs.getSize() : "에러");
                     stockDTO.setStock(pcs.getStock());
                     productsStockDTO.add(stockDTO);
                 }
@@ -931,10 +931,8 @@ public class ProductServiceImpl implements ProductService {
                 "가격",
                 "할인 가격",
                 "색상",
-                "S 재고",
-                "M 재고",
-                "L 재고",
-                "XL 재고",
+                "사이즈",
+                "재고",
                 "이미지1",
                 "이미지2",
                 "이미지3",
@@ -971,6 +969,9 @@ public class ProductServiceImpl implements ProductService {
         int rowIndex = 1;
         for (ProductsSeller product : products) {
             Row row = sheet.createRow(rowIndex++);
+
+
+
             row.createCell(0).setCellValue(product.getProducts().getProductNumber());
             row.createCell(1).setCellValue(product.getProducts().getName());
             row.createCell(2).setCellValue(product.getProducts().getCategory());
@@ -978,35 +979,33 @@ public class ProductServiceImpl implements ProductService {
             row.createCell(4).setCellValue(product.getProducts().getPrice());
             row.createCell(5).setCellValue(product.getProducts().getPriceSale() != 0 ? product.getProducts().getPriceSale() : 0);
             row.createCell(6).setCellValue(product.getProducts().getColor());
-            row.createCell(7).setCellValue(0); // S size stock
-            row.createCell(8).setCellValue(0); // M size stock
-            row.createCell(9).setCellValue(0); // L size stock
-            row.createCell(10).setCellValue(0); // XL size stock
+
+
 
             List<ProductsOption> productsOptions = productsOptionRepository.findByProductId(product.getProducts().getProductId());
 
-            for (ProductsOption productsOption : productsOptions) {
-                if (productsOption.getSize() == Size.S) {
-                    row.createCell(7).setCellValue(productsOption.getStock());
-                } else if (productsOption.getSize() == Size.M) {
-                    row.createCell(8).setCellValue(productsOption.getStock());
-                } else if (productsOption.getSize() == Size.L) {
-                    row.createCell(9).setCellValue(productsOption.getStock());
-                } else if (productsOption.getSize() == Size.XL) {
-                    row.createCell(10).setCellValue(productsOption.getStock());
-                }
-            }
+            // Collect sizes and stocks
+            String sizes = productsOptions.stream()
+                    .map(ProductsOption::getSize)
+                    .collect(Collectors.joining(","));
+            String stocks = productsOptions.stream()
+                    .map(option -> String.valueOf(option.getStock()))
+                    .collect(Collectors.joining(","));
+
+            // Set sizes and stocks in the row
+            row.createCell(7).setCellValue(sizes);
+            row.createCell(8).setCellValue(stocks);
 
             ProductsImage productsImage = productsImageRepository.findByProductId(product.getProducts().getProductId());
 
-            row.createCell(11).setCellValue(productsImage.getUrl_1() == null ? "" : productsImage.getUrl_1());
-            row.createCell(12).setCellValue(productsImage.getUrl_2() == null ? "" : productsImage.getUrl_2());
-            row.createCell(13).setCellValue(productsImage.getUrl_3() == null ? "" : productsImage.getUrl_3());
-            row.createCell(14).setCellValue(productsImage.getUrl_4() == null ? "" : productsImage.getUrl_4());
-            row.createCell(15).setCellValue(productsImage.getUrl_5() == null ? "" : productsImage.getUrl_5());
-            row.createCell(16).setCellValue(productsImage.getUrl_6() == null ? "" : productsImage.getUrl_6());
-            row.createCell(17).setCellValue(productsImage.getDetail_url() == null ? "" : productsImage.getDetail_url());
-            row.createCell(18).setCellValue(product.getProducts().getSeason());
+            row.createCell(9).setCellValue(productsImage.getUrl_1() == null ? "" : productsImage.getUrl_1());
+            row.createCell(10).setCellValue(productsImage.getUrl_2() == null ? "" : productsImage.getUrl_2());
+            row.createCell(11).setCellValue(productsImage.getUrl_3() == null ? "" : productsImage.getUrl_3());
+            row.createCell(12).setCellValue(productsImage.getUrl_4() == null ? "" : productsImage.getUrl_4());
+            row.createCell(13).setCellValue(productsImage.getUrl_5() == null ? "" : productsImage.getUrl_5());
+            row.createCell(14).setCellValue(productsImage.getUrl_6() == null ? "" : productsImage.getUrl_6());
+            row.createCell(15).setCellValue(productsImage.getDetail_url() == null ? "" : productsImage.getDetail_url());
+            row.createCell(16).setCellValue(product.getProducts().getSeason());
 
             }
 

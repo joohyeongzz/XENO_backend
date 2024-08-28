@@ -13,6 +13,7 @@ import com.daewon.xeno_backend.repository.*;
 
 import com.daewon.xeno_backend.repository.Products.ProductsImageRepository;
 import com.daewon.xeno_backend.repository.Products.ProductsStarRepository;
+import com.daewon.xeno_backend.repository.auth.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
