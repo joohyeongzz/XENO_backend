@@ -226,16 +226,17 @@ public class AuthServiceImpl implements AuthService {
 
         String brandName = brand.getBrandName();
 
+        // product에 엮여있는 엔티티 값들 삭제 ... review, reply등
         List<Products> products = productsRepository.findByBrandName(brandName);
         for (Products product: products) {
             deleteProductData(product);
         }
 
-        // 2. Brand 엔티티 삭제
+        // Brand 엔티티 삭제
         brandRepository.delete(brand);
         log.info("브랜드 {} 가 삭제되었습니다.", brand.getBrandName());
 
-        // 3. User 엔티티 삭제
+        // User 엔티티 삭제
         userRepository.delete(user);
         log.info("사용자 계정 (email: {})이 삭제되었습니다.", email);
 
@@ -285,17 +286,12 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     protected void deleteProductData(Products product) {
         log.info("누구임? " + product.getProductId());
-        productsOptionRepository.deleteByProducts_ProductId(product.getProductId());
+        int deletedOptions = productsOptionRepository.deleteAllByProductId(product.getProductId());
+        log.info("제품 ID: {}에 대한 {} 개의 옵션이 삭제되었습니다.", product.getProductId(), deletedOptions);
         productsImageRepository.deleteByProducts(product);
         productsStarRepository.deleteByProducts(product);
         productsLikeRepository.deleteByProducts(product);
         productsSellerRepository.deleteByProducts(product);
-
-//        List<Review> reviews = reviewRepository.findByProducts(product);
-//        for (Review review : reviews) {
-//            replyRepository.deleteByReview(review);
-//        }
-//        reviewRepository.deleteAll(reviews);
 
         productsRepository.delete(product);
 

@@ -17,7 +17,7 @@ public interface ProductsOptionRepository extends JpaRepository<ProductsOption, 
     void deleteByProducts_ProductId(Long productId);
 
     @Modifying
-    @Query("DELETE FROM ProductsOption po WHERE po.product.id = :productId")
+    @Query("DELETE FROM ProductsOption po WHERE po.products.productId = :productId")
     int deleteAllByProductId(@Param("productId") Long productId);
 
 }
