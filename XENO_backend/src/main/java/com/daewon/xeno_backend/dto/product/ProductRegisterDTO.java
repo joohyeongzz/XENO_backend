@@ -44,7 +44,7 @@ public class ProductRegisterDTO {
     private String url_5;
     private String url_6;
 
-    private String detail_url_1;
+    private String detail_url;
 
 
 
