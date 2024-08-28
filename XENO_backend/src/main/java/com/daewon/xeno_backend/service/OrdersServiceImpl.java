@@ -9,12 +9,12 @@ import com.daewon.xeno_backend.dto.page.PageRequestDTO;
 import com.daewon.xeno_backend.dto.product.ProductHeaderDTO;
 import com.daewon.xeno_backend.exception.UserNotFoundException;
 import com.daewon.xeno_backend.repository.*;
-import com.daewon.xeno_backend.repository.Products.ProductsImageRepository;
-import com.daewon.xeno_backend.repository.Products.ProductsOptionRepository;
-import com.daewon.xeno_backend.repository.Products.ProductsSellerRepository;
+import com.daewon.xeno_backend.repository.auth.UserRepository;
+import io.jsonwebtoken.io.IOException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +22,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -216,6 +219,9 @@ public class OrdersServiceImpl implements OrdersService {
         List<OrdersCardListDTO> dtoList = new ArrayList<>();
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd");
+
+
+
 
                 for(Orders order : orders.getContent()) {
                 OrdersCardListDTO dto = new OrdersCardListDTO();
