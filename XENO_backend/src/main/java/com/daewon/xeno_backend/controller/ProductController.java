@@ -1,25 +1,25 @@
 package com.daewon.xeno_backend.controller;
 
-import com.daewon.xeno_backend.domain.Products;
+import com.daewon.xeno_backend.dto.UploadImageReadDTO;
 import com.daewon.xeno_backend.dto.page.PageInfinityResponseDTO;
 import com.daewon.xeno_backend.dto.page.PageRequestDTO;
 import com.daewon.xeno_backend.dto.page.PageResponseDTO;
 import com.daewon.xeno_backend.dto.product.*;
+import com.daewon.xeno_backend.service.ExcelService;
 import com.daewon.xeno_backend.service.ProductService;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 
@@ -32,6 +32,7 @@ import java.util.List;
 public class ProductController {
 
     private final ProductService productService;
+    private final ExcelService excelService;
 
     @GetMapping("/read")
     public ResponseEntity<ProductInfoDTO> readProduct(@RequestParam("productId") Long productId) throws IOException {
@@ -41,32 +42,10 @@ public class ProductController {
         return ResponseEntity.ok(productInfoDTO);
     }
 
-
-    @GetMapping("/color/readImages")
-    public ResponseEntity<ProductDetailImagesDTO> readProductDetailImages(
-            @RequestParam Long productId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "2") int size) {
-
-        try {
-            // ProductService를 통해 페이징 처리된 상품의 상세 이미지 가져오기
-            ProductDetailImagesDTO productDetailImagesDTO = productService.getProductDetailImages(productId, page,
-                    size);
-
-            // 페이징된 이미지 데이터와 HTTP 200 OK 응답 반환
-            return ResponseEntity.ok(productDetailImagesDTO);
-        } catch (Exception e) {
-            // 예외 처리
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-
-
     @Operation(summary = "카테고리")
     @GetMapping("/read/category")
     public ResponseEntity<List<ProductColorInfoCardDTO>> readProductsListByCategory(@RequestParam String categoryId,
                                                                                 @RequestParam(required = false, defaultValue = "") String categorySubId) {
-
         try {
             List<ProductColorInfoCardDTO> products = productService.getProductsInfoByCategory(categoryId, categorySubId);
             // 페이징된 이미지 데이터와 HTTP 200 OK 응답 반환
@@ -105,7 +84,7 @@ public class ProductController {
     }
 
     @Operation(summary = "상품 카드")
-    @GetMapping("/color/read/info")
+    @GetMapping("/read/card")
     public ResponseEntity<ProductColorInfoCardDTO> readProductCardInfo(@RequestParam Long productId) {
 
         try {
@@ -166,7 +145,7 @@ public class ProductController {
             @RequestPart(name = "productImages")  List<MultipartFile> productImages,
             @RequestPart(name = "productDetailImage") MultipartFile productDetailImage) {
         try {
-            log.info("asdsad");
+
              productService.uploadImages(productNumber, productImages != null && !productImages.isEmpty() ? productImages : null,
                     productDetailImage != null && !productDetailImage.isEmpty() ? productDetailImage : null
             );
@@ -177,6 +156,20 @@ public class ProductController {
         }
     }
 
+    @Operation(summary = "업로드 이미지 확인")
+    @GetMapping("/read/all-upload-images")
+    public ResponseEntity<List<UploadImageReadDTO>> getUploadImageAll() {
+        List<UploadImageReadDTO> dto = productService.getUploadImageAll();
+        return ResponseEntity.ok(dto);
+    }
+
+    @Operation(summary = "품번에 따른 업로드 이미지 확인")
+    @GetMapping("/read/upload-image")
+    public ResponseEntity<UploadImageReadDTO> getUploadImageByProductNumber(@RequestParam String productNumber) {
+        UploadImageReadDTO dto = productService.getUploadImageByProductNumber(productNumber);
+        return ResponseEntity.ok(dto);
+    }
+
     @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> createProduct(
             @RequestPart(name = "excel") MultipartFile excel) {
@@ -184,5 +177,18 @@ public class ProductController {
         return ResponseEntity.ok("\"성공\"");
     }
 
+    @Operation(summary = "엑셀 다운로드")
+    @GetMapping("/download/excel")
+    public void download(HttpServletResponse response) throws IOException {
+        byte[] excelFile = productService.generateExcelFile();
 
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-Disposition", "attachment;filename=spring_excel_download.xlsx");
+        try (ServletOutputStream outputStream = response.getOutputStream()) {
+            outputStream.write(excelFile);
+            outputStream.flush();
+        }
+    }
 }
+
+

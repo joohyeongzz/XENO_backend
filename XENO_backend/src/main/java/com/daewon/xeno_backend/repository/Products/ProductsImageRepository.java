@@ -1,8 +1,11 @@
-package com.daewon.xeno_backend.repository;
+package com.daewon.xeno_backend.repository.Products;
 
 
 import com.daewon.xeno_backend.domain.Products;
 import com.daewon.xeno_backend.domain.ProductsImage;
+import com.daewon.xeno_backend.domain.auth.Users;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -26,10 +29,22 @@ public interface ProductsImageRepository extends JpaRepository<ProductsImage, Lo
 
     void deleteByProducts(Products products);
 
+    @Query("SELECT u FROM ProductsImage u WHERE u.productNumber = :productNumber AND u.users = :users")
+    ProductsImage findByProductNumberAndUsers(String productNumber, Users users);
 
+
+    @Query("SELECT u FROM ProductsImage u WHERE u.users = :users")
+    List<ProductsImage> findByUsers(Users users);
+
+    @Query("SELECT u FROM ProductsImage u WHERE u.products IS NULL")
+    List<ProductsImage> findImagesWithoutProductId();
 
 
     @Query("delete from ProductsImage p WHERE p.products.productId = :productId ")
     void deleteAllByproductId(Long productId);
+
+
+    @Query("SELECT p FROM ProductsImage p WHERE p.products.productId = :productId")
+    Page<ProductsImage> findByProductIdPaging(Long productId, Pageable pageable);
 
 }

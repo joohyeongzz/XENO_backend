@@ -1,7 +1,7 @@
 //package com.daewon.xeno_backend.utils;
 //
 //import com.daewon.xeno_backend.dto.auth.AuthSigninDTO;
-//import com.daewon.xeno_backend.repository.ProductsRepository;
+//import com.daewon.xeno_backend.repository.Products.ProductsRepository;
 //import lombok.RequiredArgsConstructor;
 //import lombok.extern.log4j.Log4j2;
 //import org.springframework.security.core.Authentication;

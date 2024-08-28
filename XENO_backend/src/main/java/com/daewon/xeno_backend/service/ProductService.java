@@ -4,10 +4,12 @@ package com.daewon.xeno_backend.service;
 
 import com.daewon.xeno_backend.domain.Products;
 
+import com.daewon.xeno_backend.dto.UploadImageReadDTO;
 import com.daewon.xeno_backend.dto.page.PageInfinityResponseDTO;
 import com.daewon.xeno_backend.dto.page.PageRequestDTO;
 import com.daewon.xeno_backend.dto.page.PageResponseDTO;
 import com.daewon.xeno_backend.dto.product.*;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -42,4 +44,10 @@ public interface ProductService {
 
     void saveProductsFromExcel(MultipartFile excel);
 
+    List<UploadImageReadDTO> getUploadImageAll();
+
+    UploadImageReadDTO getUploadImageByProductNumber(String productNumber);
+
+
+    byte[] generateExcelFile() throws IOException;
 }

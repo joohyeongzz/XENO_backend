@@ -82,7 +82,7 @@ public class ExcelService {
                 product.setUrl_4(url4);
                 product.setUrl_5(url5);
                 product.setUrl_6(url6);
-                product.setDetail_url_1(row.getCell(17).getStringCellValue());
+                product.setDetail_url(row.getCell(17).getStringCellValue());
                 product.setSeason(row.getCell(18).getStringCellValue());
 
                 productList.add(product);

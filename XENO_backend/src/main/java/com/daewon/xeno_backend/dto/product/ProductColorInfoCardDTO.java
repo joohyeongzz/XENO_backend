@@ -36,6 +36,6 @@ public class ProductColorInfoCardDTO {
 
     private String color;
 
-    private byte[] productImage;
+    private String productImage;
 
 }
