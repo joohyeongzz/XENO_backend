@@ -2,6 +2,9 @@ package com.daewon.xeno_backend.service;
 
 import com.daewon.xeno_backend.domain.auth.*;
 import com.daewon.xeno_backend.dto.auth.*;
+import com.daewon.xeno_backend.dto.user.UserUpdateDTO;
+import com.daewon.xeno_backend.exception.UserNotFoundException;
+import com.daewon.xeno_backend.repository.RefreshTokenRepository;
 import com.daewon.xeno_backend.repository.auth.BrandRepository;
 import com.daewon.xeno_backend.repository.auth.CustomerRepository;
 import com.daewon.xeno_backend.repository.auth.ManagerRepository;
@@ -28,6 +31,7 @@ public class AuthServiceImpl implements AuthService {
     private final BrandRepository brandRepository;
     private final CustomerRepository customerRepository;
     private final ManagerRepository managerRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Override
     @Transactional
@@ -146,6 +150,92 @@ public class AuthServiceImpl implements AuthService {
             return null;
         }
     }
+
+    // user정보 password, name, address, phoneNumber 수정
+    @Transactional
+    @Override
+    public Users updateUser(String email, UserUpdateDTO updateDTO) throws UserNotFoundException {
+        Users user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException("User email을 찾을 수 없음 : " + email));
+
+        // password 업데이트
+        if (updateDTO.getPassword() != null && !updateDTO.getPassword().isEmpty()) {
+            user.setPassword(passwordEncoder.encode(updateDTO.getPassword()));
+        }
+
+        // name 업데이트
+        if (updateDTO.getName() != null && !updateDTO.getName().isEmpty()) {
+            user.setName(updateDTO.getName());
+        }
+
+        // address 업데이트
+        if (updateDTO.getAddress() != null && !updateDTO.getAddress().isEmpty()) {
+            user.setAddress(updateDTO.getAddress());
+        }
+
+        // phoneNumber 업데이트
+        if (updateDTO.getPhoneNumber() != null && !updateDTO.getPhoneNumber().isEmpty()) {
+            user.setPhoneNumber(updateDTO.getPhoneNumber());
+        }
+
+        return userRepository.save(user);
+    }
+
+    @Transactional
+    @Override
+    public void deleteUser(String email) throws UserNotFoundException {
+        Users user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException("User의 email을 찾을수 없습니다 : " + email));
+
+        // Customer 엔티티 삭제
+        if (user.getCustomer() != null) {
+            customerRepository.delete(user.getCustomer());
+        }
+
+        // Users 엔티티 삭제
+        userRepository.delete(user);
+    }
+
+//    @Transactional
+//    public void deleteUser(String userEmail) throws UserNotFoundException {
+//        log.info("Attempting to delete user with email: {}", userEmail);
+//
+//        Users user = userRepository.findByEmail(userEmail)
+//                .orElseThrow(() -> new UserNotFoundException("User not found with email: " + userEmail));
+//
+//        log.info("User found. User ID: {}", user.getUserId());
+//
+//        // Customer 엔티티 삭제
+//        try {
+//            if (user.getCustomer() != null) {
+//                log.info("Deleting customer for user: {}", userEmail);
+//                customerRepository.delete(user.getCustomer());
+//            }
+//        } catch (Exception e) {
+//            log.error("Error deleting customer for user: {}", userEmail, e);
+//            throw new RuntimeException("Failed to delete customer", e);
+//        }
+//
+//        // RefreshToken 삭제
+//        try {
+//            log.info("Deleting refresh tokens for user: {}", userEmail);
+//            refreshTokenRepository.deleteByEmail(userEmail);
+//        } catch (Exception e) {
+//            log.error("Error deleting refresh tokens for user: {}", userEmail, e);
+//            throw new RuntimeException("Failed to delete refresh tokens", e);
+//        }
+//
+//        // Users 엔티티 삭제
+//        try {
+//            log.info("Deleting user: {}", userEmail);
+//            userRepository.delete(user);
+//        } catch (Exception e) {
+//            log.error("Error deleting user: {}", userEmail, e);
+//            throw new RuntimeException("Failed to delete user", e);
+//        }
+//
+//        log.info("User successfully deleted: {}", userEmail);
+//    }
 
     @Override
     public SellerInfoCardDTO readSellerInfo(UserDetails userDetails) {
