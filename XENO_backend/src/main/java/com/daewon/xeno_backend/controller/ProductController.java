@@ -156,6 +156,23 @@ public class ProductController {
         }
     }
 
+    @PutMapping(value = "/update/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> updateProductImages(
+            @RequestPart("productNumber") String productNumber,
+            @RequestPart(name = "productImages")  List<MultipartFile> productImages,
+            @RequestPart(name = "productDetailImage") MultipartFile productDetailImage) {
+        try {
+
+            productService.updateProductImages(productNumber, productImages != null && !productImages.isEmpty() ? productImages : null,
+                    productDetailImage != null && !productDetailImage.isEmpty() ? productDetailImage : null
+            );
+            return ResponseEntity.ok("\"성공\"");
+        } catch (Exception e) {
+            log.error("상품 등록 중 오류 발생: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
     @Operation(summary = "업로드 이미지 확인")
     @GetMapping("/read/all-upload-images")
     public ResponseEntity<List<UploadImageReadDTO>> getUploadImageAll() {
@@ -189,6 +206,28 @@ public class ProductController {
             outputStream.flush();
         }
     }
+
+    @PutMapping("/update/stock")
+    public ResponseEntity<String> updateProductStock(@RequestBody List<ProductStockUpdateDTO> dtoList) {
+        try {
+            productService.updateProductStock(dtoList);
+            return ResponseEntity.ok("Product stock updated successfully.");
+        } catch (Exception e) {
+            // 로그에 에러 메시지 기록
+            // logger.error("Failed to update product stock", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to update product stock.");
+        }
+    }
+
+
+//    @PostMapping(value = "/compare",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+//    public ResponseEntity<String> compareImages(
+//            @RequestParam("file") MultipartFile file
+//            ) {
+//        String asd = productService.asd(file);
+//        return ResponseEntity.ok(asd);
+//    }
+
 }
 
 

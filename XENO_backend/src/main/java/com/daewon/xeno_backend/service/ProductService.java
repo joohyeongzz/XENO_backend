@@ -17,7 +17,12 @@ import java.util.List;
 
 public interface ProductService {
 
+
+//    String asd(MultipartFile file);
+
     void uploadImages(String productNumber, List<MultipartFile> productImages ,MultipartFile productDetailImage);
+
+    void updateProductImages(String productNumber, List<MultipartFile> productImages ,MultipartFile productDetailImage) throws Exception;
 
     ProductInfoDTO getProductInfo(Long productId) throws IOException;
 
@@ -47,6 +52,10 @@ public interface ProductService {
     List<UploadImageReadDTO> getUploadImageAll();
 
     UploadImageReadDTO getUploadImageByProductNumber(String productNumber);
+
+
+    void updateProductStock(List<ProductStockUpdateDTO> dto);
+
 
 
     byte[] generateExcelFile() throws IOException;
