@@ -1,7 +1,9 @@
 package com.daewon.xeno_backend.controller;
 
+import com.daewon.xeno_backend.domain.auth.Users;
 import com.daewon.xeno_backend.dto.auth.TokenDTO;
 import com.daewon.xeno_backend.dto.reply.ReplyReadDTO;
+import com.daewon.xeno_backend.dto.user.UserUpdateDTO;
 import com.daewon.xeno_backend.exception.UserNotFoundException;
 import com.daewon.xeno_backend.repository.RefreshTokenRepository;
 import com.daewon.xeno_backend.service.AuthService;
@@ -12,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
@@ -105,6 +108,33 @@ public class UserController {
         SecurityContextHolder.clearContext();
 
         return ResponseEntity.ok("Logout successful");
+    }
+
+    // user정보 수정
+    @PutMapping("/update")
+    public ResponseEntity<?> updateUser(@RequestBody UserUpdateDTO updateDTO, Authentication authentication) {
+        try {
+            String userEmail = authentication.getName();
+            Users updateUser = authService.updateUser(userEmail, updateDTO);
+
+            return ResponseEntity.status(201).body("user정보 수정 완료 : " + updateUser);
+        } catch (UserNotFoundException e) {
+            return ResponseEntity.status(404).body("user정보를 찾을 수 없습니다.");
+        }
+    }
+
+    // user 탈퇴 메서드
+    @DeleteMapping("/delete")
+    public ResponseEntity<String> deleteUser(Authentication authentication) {
+        try {
+            String userEmail = authentication.getName();
+            authService.deleteUser(userEmail);
+            return ResponseEntity.ok("User 삭제 성공");
+        } catch (UserNotFoundException e) {
+            return ResponseEntity.status(404).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("user를 삭제하는 중 오류가 발생함.");
+        }
     }
 
     // 특정 사용자가 작성한 Reply 목록 조회
