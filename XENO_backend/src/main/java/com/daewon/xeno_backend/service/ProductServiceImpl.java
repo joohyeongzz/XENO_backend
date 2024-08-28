@@ -1,40 +1,51 @@
 package com.daewon.xeno_backend.service;
 
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.DeleteObjectRequest;
+import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.S3Object;
 import com.daewon.xeno_backend.domain.*;
 import com.daewon.xeno_backend.domain.auth.Users;
+import com.daewon.xeno_backend.dto.UploadImageReadDTO;
 import com.daewon.xeno_backend.dto.page.PageInfinityResponseDTO;
 import com.daewon.xeno_backend.dto.page.PageRequestDTO;
 import com.daewon.xeno_backend.dto.page.PageResponseDTO;
 import com.daewon.xeno_backend.dto.product.*;
 import com.daewon.xeno_backend.repository.*;
-import com.daewon.xeno_backend.repository.auth.UserRepository;
-import com.daewon.xeno_backend.security.exception.ProductNotFoundException;
+import com.daewon.xeno_backend.repository.Products.*;
 
+import com.daewon.xeno_backend.repository.auth.UserRepository;
 import com.daewon.xeno_backend.utils.CategoryUtils;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.util.CellRangeAddressList;
+import org.apache.poi.ss.util.CellReference;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -45,7 +56,6 @@ public class ProductServiceImpl implements ProductService {
 
     private final ProductsRepository productsRepository;
     private final ProductsImageRepository productsImageRepository;
-    private final ProductsDetailImageRepository productsDetailImageRepository;
     private final ProductsStarRepository productsStarRepository;
     private final ProductsLikeRepository productsLikeRepository;
     private final ReviewRepository reviewRepository;
@@ -57,7 +67,6 @@ public class ProductServiceImpl implements ProductService {
     private final ProductsSearchRepository productsSearchRepository;
     private final ProductsOptionRepository productsOptionRepository;
     private final ExcelService excelService;
-    private final UploadImageRepository uploadImageRepository;
 
     @Value("${aws.s3.bucket-name}")
     private String bucketName;
@@ -76,7 +85,7 @@ public class ProductServiceImpl implements ProductService {
             log.info("이미지 업로드 성공: " + key);
 
             // S3 URL 생성
-            String fileUrl = "https://" + bucketName + ".s3.amazonaws.com/" + key;
+            String fileUrl = "https://" + bucketName + ".s3.ap-northeast-2.amazonaws.com/" + key;
             return fileUrl; // S3에서의 객체 URL 반환
         } catch (IOException e) {
             log.error("파일 업로드 도중 오류가 발생했습니다: ", e);
@@ -105,7 +114,7 @@ public class ProductServiceImpl implements ProductService {
         Users users = userRepository.findByEmail(currentUserName).orElse(null);
 
         // Create UploadImage object with the URLs
-        UploadImage uploadImage = UploadImage.builder()
+        ProductsImage productsImage = ProductsImage.builder()
                 .productNumber(productNumber)
                 .url_1(numberOfImages > 0 ? urls[0] : null)
                 .url_2(numberOfImages > 1 ? urls[1] : null)
@@ -113,38 +122,96 @@ public class ProductServiceImpl implements ProductService {
                 .url_4(numberOfImages > 3 ? urls[3] : null)
                 .url_5(numberOfImages > 4 ? urls[4] : null)
                 .url_6(numberOfImages > 5 ? urls[5] : null)
-                .detail_url_1(detailUrl)
+                .detail_url(detailUrl)
                 .users(users)
+
                 .build();
 
-        uploadImageRepository.save(uploadImage);
+        productsImageRepository.save(productsImage);
     }
 
+    @Transactional
+//    @Scheduled(cron = "0 */2 * * * ?") // 매 2분마다 실행
+    @Scheduled(cron = "0 0 0 * * ?") // 매일 자정에 실행
+    public void deleteOldS3Objects() {
+        List<ProductsImage> oldImages = productsImageRepository.findImagesWithoutProductId();
+        for (ProductsImage image : oldImages) {
+            deleteObjectFromS3(image.getUrl_1());
+            deleteObjectFromS3(image.getUrl_2());
+            deleteObjectFromS3(image.getUrl_4());
+            deleteObjectFromS3(image.getUrl_5());
+            deleteObjectFromS3(image.getUrl_6());
+            deleteObjectFromS3(image.getDetail_url());
+            productsImageRepository.deleteById(image.getProductImageId());
+        }
+    }
+
+
+    private void deleteObjectFromS3(String url) {
+        if (url != null && !url.isEmpty()) {
+            String key = extractKeyFromUrl(url); // URL에서 키 추출
+            s3Client.deleteObject(bucketName, key);
+        }
+    }
+
+    private String extractKeyFromUrl(String url) {
+        // URL에서 S3 객체의 키를 추출하는 로직
+        String keyPrefix = "https://" + bucketName + ".s3.ap-northeast-2.amazonaws.com/";
+        if (url.startsWith(keyPrefix)) {
+            return url.substring(keyPrefix.length());
+        } else {
+            throw new IllegalArgumentException("URL does not start with expected prefix: " + url);
+        }
+    }
+
+
+    public static boolean equalsIgnoreNullAndEmpty(String a, String b) {
+        return (a == null || a.isEmpty()) ? (b == null || b.isEmpty()) : a.equals(b);
+    }
+
+
+    @Transactional
     public void saveProductsFromExcel(MultipartFile excel) {
         try {
+
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserName = authentication.getName();
+            Users users = userRepository.findByEmail(currentUserName).orElse(null);
+
             List<ProductRegisterDTO> productList = excelService.parseExcelFile(excel);
             // 엑셀에서 가져온 품번을 추출
             Set<String> productNumbersFromExcel = productList.stream()
                     .map(ProductRegisterDTO::getProductNumber)
                     .collect(Collectors.toSet());
 
-            // 데이터베이스에서 모든 품번을 추출
-            List<Products> allProducts = productsRepository.findAll();
-            Set<String> productNumbersFromDatabase = allProducts.stream()
-                    .map(Products::getProductNumber)
-                    .collect(Collectors.toSet());
+            List<ProductsSeller> allProducts = productsSellerRepository.findByUsers(users);
 
             // 엑셀에 없는 품번을 데이터베이스에서 삭제
-            for (Products product : allProducts) {
-                if (!productNumbersFromExcel.contains(product.getProductNumber())) {
-                    productsRepository.delete(product);
+            for (ProductsSeller product : allProducts) {
+                if (!productNumbersFromExcel.contains(product.getProducts().getProductNumber())) {
+                    ProductsImage image = productsImageRepository.findByProductId(product.getProducts().getProductId());
+                    deleteObjectFromS3(image.getUrl_1());
+                    if (image.getUrl_2() != null) {
+                        deleteObjectFromS3(image.getUrl_2());
+                    }
+                    if (image.getUrl_3() != null) {
+                        deleteObjectFromS3(image.getUrl_3());
+                    }
+                    if (image.getUrl_4() != null) {
+                        deleteObjectFromS3(image.getUrl_4());
+                    }
+                    if (image.getUrl_5() != null) {
+                        deleteObjectFromS3(image.getUrl_5());
+                    }
+                    if (image.getUrl_6() != null) {
+                        deleteObjectFromS3(image.getUrl_6());
+                    }
+                        deleteObjectFromS3(image.getDetail_url());
+                    productsRepository.delete(product.getProducts());
                 }
             }
 
             for (ProductRegisterDTO dto : productList) {
-                Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-                String currentUserName = authentication.getName();
-                Users users = userRepository.findByEmail(currentUserName).orElse(null);
                 Products existingProduct = productsRepository.findByProductNumber(dto.getProductNumber());
                 if (existingProduct == null) {
                     Products newProduct = Products.builder()
@@ -174,24 +241,58 @@ public class ProductServiceImpl implements ProductService {
                                 .build();
                         productsOptionRepository.save(productsOption);
                     }
-                    ProductsImage productsImage = ProductsImage.builder()
-                            .products(newProduct)
-                            .url_1(dto.getUrl_1())
-                            .url_2(dto.getUrl_2())
-                            .url_3(dto.getUrl_3())
-                            .url_4(dto.getUrl_4())
-                            .url_5(dto.getUrl_5())
-                            .url_6(dto.getUrl_6())
-                            .build();
-                    productsImageRepository.save(productsImage);
 
+                    ProductsImage image = productsImageRepository.findByProductNumberAndUsers(dto.getProductNumber(),users);
 
-                    ProductsDetailImage productsDetailImage = ProductsDetailImage.builder()
-                            .products(newProduct)
-                            .url_1(dto.getDetail_url_1())
-                            .build();
-                    productsDetailImageRepository.save(productsDetailImage);
+                    // URL 일치 여부 확인
+                    if (image != null) {
+                        // 비교할 URL을 문자열로 저장
+                        StringBuilder errorMessage = new StringBuilder("URLs do not match. Issues with: ");
 
+                        boolean isValid = true;
+
+                        // 각 URL 비교 및 일치하지 않는 경우 메시지 추가
+                        if (!equalsIgnoreNullAndEmpty(image.getUrl_1(), dto.getUrl_1())) {
+                            errorMessage.append("url_1, ");
+                            isValid = false;
+                        }
+                        if (!equalsIgnoreNullAndEmpty(image.getUrl_2(), dto.getUrl_2())) {
+                            errorMessage.append("url_2, ");
+                            isValid = false;
+                        }
+                        if (!equalsIgnoreNullAndEmpty(image.getUrl_3(), dto.getUrl_3())) {
+                            errorMessage.append("url_3, ");
+                            isValid = false;
+                        }
+                        if (!equalsIgnoreNullAndEmpty(image.getUrl_4(), dto.getUrl_4())) {
+                            errorMessage.append("url_4, ");
+                            isValid = false;
+                        }
+                        if (!equalsIgnoreNullAndEmpty(image.getUrl_5(), dto.getUrl_5())) {
+                            errorMessage.append("url_5, ");
+                            isValid = false;
+                        }
+                        if (!equalsIgnoreNullAndEmpty(image.getUrl_6(), dto.getUrl_6())) {
+                            errorMessage.append("url_6, ");
+                            isValid = false;
+                        }
+                        if (!equalsIgnoreNullAndEmpty(image.getDetail_url(), dto.getDetail_url())) {
+                            errorMessage.append("detail_url, ");
+                            isValid = false;
+                        }
+
+                        // 오류 메시지에서 마지막 쉼표와 공백 제거
+                        if (!isValid) {
+                            errorMessage.setLength(errorMessage.length() - 2);
+                            throw new IllegalStateException(errorMessage.toString());
+                        }
+
+                        image.setProducts(newProduct);
+                        productsImageRepository.save(image);
+
+                    } else {
+                        throw new IllegalStateException("UploadImage not found. Operation cancelled.");
+                    }
                 } else {
                     existingProduct.setName(dto.getName());
                     existingProduct.setCategory(dto.getCategory());
@@ -239,19 +340,54 @@ public class ProductServiceImpl implements ProductService {
                             productsOptionRepository.delete(colorSize);
                         }
                     }
-                    ProductsImage productsImage = productsImageRepository.findByProductId(existingProduct.getProductId());
-                    productsImage.setUrl_1(dto.getUrl_1());
-                    productsImage.setUrl_2(dto.getUrl_2());
-                    productsImage.setUrl_3(dto.getUrl_3());
-                    productsImage.setUrl_4(dto.getUrl_4());
-                    productsImage.setUrl_5(dto.getUrl_5());
-                    productsImage.setUrl_6(dto.getUrl_6());
-                    productsImageRepository.save(productsImage);
-                    ProductsDetailImage productsDetailImage = productsDetailImageRepository.findOneByProductId(existingProduct.getProductId());
-                    productsDetailImage.setUrl_1(dto.getDetail_url_1());
 
-                    productsDetailImageRepository.save(productsDetailImage);
+                    ProductsImage image = productsImageRepository.findByProductNumberAndUsers(dto.getProductNumber(),users);
 
+                    // URL 일치 여부 확인
+                    if (image != null) {
+                        // 비교할 URL을 문자열로 저장
+                        StringBuilder errorMessage = new StringBuilder("URLs do not match. Issues with: ");
+
+                        boolean isValid = true;
+
+                        // 각 URL 비교 및 일치하지 않는 경우 메시지 추가
+                        if (!equalsIgnoreNullAndEmpty(image.getUrl_1(), dto.getUrl_1())) {
+                            errorMessage.append("url_1, ");
+                            isValid = false;
+                        }
+                        if (!equalsIgnoreNullAndEmpty(image.getUrl_2(), dto.getUrl_2())) {
+                            errorMessage.append("url_2, ");
+                            isValid = false;
+                        }
+                        if (!equalsIgnoreNullAndEmpty(image.getUrl_3(), dto.getUrl_3())) {
+                            errorMessage.append("url_3, ");
+                            isValid = false;
+                        }
+                        if (!equalsIgnoreNullAndEmpty(image.getUrl_4(), dto.getUrl_4())) {
+                            errorMessage.append("url_4, ");
+                            isValid = false;
+                        }
+                        if (!equalsIgnoreNullAndEmpty(image.getUrl_5(), dto.getUrl_5())) {
+                            errorMessage.append("url_5, ");
+                            isValid = false;
+                        }
+                        if (!equalsIgnoreNullAndEmpty(image.getUrl_6(), dto.getUrl_6())) {
+                            errorMessage.append("url_6, ");
+                            isValid = false;
+                        }
+                        if (!equalsIgnoreNullAndEmpty(image.getDetail_url(), dto.getDetail_url())) {
+                            errorMessage.append("detail_url ");
+                            isValid = false;
+                        }
+
+                        // 오류 메시지에서 마지막 쉼표와 공백 제거
+                        if (!isValid) {
+                            errorMessage.setLength(errorMessage.length() - 2);
+                            throw new IllegalStateException(errorMessage.toString());
+                        }
+                    } else {
+                        throw new IllegalStateException("UploadImage not found. Operation cancelled.");
+                    }
                 }
             }
         } catch (IOException e) {
@@ -357,8 +493,8 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public ProductDetailImagesDTO getProductDetailImages(Long productId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<ProductsDetailImage> productDetailImages = productsDetailImageRepository
-                .findByProductId(productId, pageable);
+        Page<ProductsImage> productDetailImages = productsImageRepository
+                .findByProductIdPaging(productId, pageable);
         long count = productDetailImages.getTotalElements();
 
 
@@ -476,7 +612,7 @@ public class ProductServiceImpl implements ProductService {
                         .findByProductId(products.getProductId());
 
 
-                    dto.setProductImage(null);
+                dto.setProductImage(productsImage.getUrl_1());
 
                 dto.setProductId(products.getProductId());
                 dto.setLikeIndex(productsLike != null ? productsLike.getLikeIndex() : 0);
@@ -533,7 +669,11 @@ public class ProductServiceImpl implements ProductService {
             dto.setLikeIndex(productsLike != null ? productsLike.getLikeIndex() : 0);
             dto.setStarAvg(productsStar != null ? productsStar.getStarAvg() : 0);
 
+            ProductsImage productsImage = productsImageRepository
+                    .findByProductId(products.getProductId());
 
+
+            dto.setProductImage(productsImage.getUrl_1());
             productsInfoCardDTOList.add(dto);
             log.info(productsInfoCardDTOList);
             log.info(dto);
@@ -558,8 +698,6 @@ public class ProductServiceImpl implements ProductService {
             dto.setProductName(productsSeller.getProducts().getName());
             dtoList.add(dto);
         }
-
-
         return dtoList;
     }
 
@@ -714,13 +852,171 @@ public class ProductServiceImpl implements ProductService {
         productInfoDTO.setUrl_4(productImages.getUrl_4());
         productInfoDTO.setUrl_5(productImages.getUrl_5());
         productInfoDTO.setUrl_6(productImages.getUrl_6());
-        ProductsDetailImage productDetailImage = productsDetailImageRepository.findOneByProductId(products.getProductId());
-        productInfoDTO.setDetail_url_1(productDetailImage.getUrl_1());
-
+        productInfoDTO.setDetail_url(productImages.getDetail_url());
 
         return productInfoDTO;
     }
 
+    @Override
+    public List<UploadImageReadDTO> getUploadImageAll() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserName = authentication.getName();
+
+        Optional<Users> optionalUser = userRepository.findByEmail(currentUserName);
+        if (optionalUser.isEmpty()) {
+            throw new RuntimeException("User not found: " + currentUserName);
+        }
+
+        Users users = optionalUser.get();
+        List<ProductsImage> images = productsImageRepository.findByUsers(users);
+
+        return images.stream()
+                .map(this::convertToUploadImageReadDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public UploadImageReadDTO getUploadImageByProductNumber(String productNumber) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserName = authentication.getName();
+        Optional<Users> optionalUser = userRepository.findByEmail(currentUserName);
+        if (optionalUser.isEmpty()) {
+            throw new RuntimeException("User not found: " + currentUserName);
+        }
+
+        Users users = optionalUser.get();
+        ProductsImage image = productsImageRepository.findByProductNumberAndUsers(productNumber, users);
+
+        return convertToUploadImageReadDTO(image);
+    }
+
+    private UploadImageReadDTO convertToUploadImageReadDTO(ProductsImage image) {
+        UploadImageReadDTO dto = new UploadImageReadDTO();
+        dto.setProductNumber(image.getProductNumber());
+        dto.setUrl_1(image.getUrl_1());
+        dto.setUrl_2(image.getUrl_2());
+        dto.setUrl_3(image.getUrl_3());
+        dto.setUrl_4(image.getUrl_4());
+        dto.setUrl_5(image.getUrl_5());
+        dto.setUrl_6(image.getUrl_6());
+        dto.setDetail_url_1(image.getDetail_url());
+        return dto;
+    }
+
+
+    public byte[] generateExcelFile() throws IOException {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserName = authentication.getName();
+        Optional<Users> optionalUser = userRepository.findByEmail(currentUserName);
+        if (optionalUser.isEmpty()) {
+            throw new RuntimeException("User not found: " + currentUserName);
+        }
+
+        Users users = optionalUser.get();
+
+        List<ProductsSeller> products = productsSellerRepository.findByUsers(users);
+
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Sheet1");
+        sheet.setDefaultColumnWidth(10);
+
+        // Header data
+        int rowCount = 0;
+        String headerNames[] = new String[]{
+                "품번",
+                "상품 이름",
+                "카테고리",
+                "서브 카테고리",
+                "가격",
+                "할인 가격",
+                "색상",
+                "S 재고",
+                "M 재고",
+                "L 재고",
+                "XL 재고",
+                "이미지1",
+                "이미지2",
+                "이미지3",
+                "이미지4",
+                "이미지5",
+                "이미지6",
+                "상세이미지6",
+                "시즌"
+        };
+
+        Row headerRow = sheet.createRow(rowCount++);
+        for (int i = 0; i < headerNames.length; i++) {
+            Cell headerCell = headerRow.createCell(i);
+            headerCell.setCellValue(headerNames[i]);
+        }
+
+        // 카테고리와 서브 카테고리 데이터
+        String[] categories = {"상의", "하의", "아우터"};
+
+        // 카테고리 드롭다운 설정
+        DataValidationHelper validationHelper = sheet.getDataValidationHelper();
+        DataValidationConstraint categoryConstraint = validationHelper.createExplicitListConstraint(categories);
+        CellRangeAddressList categoryAddressList = new CellRangeAddressList(1, 100, 2, 2); // C열에 적용
+        DataValidation categoryValidation = validationHelper.createValidation(categoryConstraint, categoryAddressList);
+        categoryValidation.setShowErrorBox(true);
+        sheet.addValidationData(categoryValidation);
+
+        String[] subCategoriesTops = {"반팔", "긴팔"};
+        String[] subCategoriesBottoms = {"청바지", "면", "반바지", "나일론"};
+        String[] subCategoriesOuterwear = {"코트", "후드집업", "바람막이",};
+
+
+
+        int rowIndex = 1;
+        for (ProductsSeller product : products) {
+            Row row = sheet.createRow(rowIndex++);
+            row.createCell(0).setCellValue(product.getProducts().getProductNumber());
+            row.createCell(1).setCellValue(product.getProducts().getName());
+            row.createCell(2).setCellValue(product.getProducts().getCategory());
+            row.createCell(3).setCellValue(product.getProducts().getCategorySub());
+            row.createCell(4).setCellValue(product.getProducts().getPrice());
+            row.createCell(5).setCellValue(product.getProducts().getPriceSale() != 0 ? product.getProducts().getPriceSale() : 0);
+            row.createCell(6).setCellValue(product.getProducts().getColor());
+            row.createCell(7).setCellValue(0); // S size stock
+            row.createCell(8).setCellValue(0); // M size stock
+            row.createCell(9).setCellValue(0); // L size stock
+            row.createCell(10).setCellValue(0); // XL size stock
+
+            List<ProductsOption> productsOptions = productsOptionRepository.findByProductId(product.getProducts().getProductId());
+
+            for (ProductsOption productsOption : productsOptions) {
+                if (productsOption.getSize() == Size.S) {
+                    row.createCell(7).setCellValue(productsOption.getStock());
+                } else if (productsOption.getSize() == Size.M) {
+                    row.createCell(8).setCellValue(productsOption.getStock());
+                } else if (productsOption.getSize() == Size.L) {
+                    row.createCell(9).setCellValue(productsOption.getStock());
+                } else if (productsOption.getSize() == Size.XL) {
+                    row.createCell(10).setCellValue(productsOption.getStock());
+                }
+            }
+
+            ProductsImage productsImage = productsImageRepository.findByProductId(product.getProducts().getProductId());
+
+            row.createCell(11).setCellValue(productsImage.getUrl_1() == null ? "" : productsImage.getUrl_1());
+            row.createCell(12).setCellValue(productsImage.getUrl_2() == null ? "" : productsImage.getUrl_2());
+            row.createCell(13).setCellValue(productsImage.getUrl_3() == null ? "" : productsImage.getUrl_3());
+            row.createCell(14).setCellValue(productsImage.getUrl_4() == null ? "" : productsImage.getUrl_4());
+            row.createCell(15).setCellValue(productsImage.getUrl_5() == null ? "" : productsImage.getUrl_5());
+            row.createCell(16).setCellValue(productsImage.getUrl_6() == null ? "" : productsImage.getUrl_6());
+            row.createCell(17).setCellValue(productsImage.getDetail_url() == null ? "" : productsImage.getDetail_url());
+            row.createCell(18).setCellValue(product.getProducts().getSeason());
+
+            }
+
+        // Write to ByteArrayOutputStream
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            workbook.write(outputStream);
+            workbook.close();
+            return outputStream.toByteArray();
+        }
+    }
 
 
 }
