@@ -70,8 +70,6 @@ public class OrdersServiceImpl implements OrdersService {
     @Transactional
     @Override
     public List<OrdersDTO> createOrders(List<OrdersDTO> ordersDTO, String email) {
-
-
         Users users = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없음"));
 
@@ -94,9 +92,9 @@ public class OrdersServiceImpl implements OrdersService {
                 .build();
             savedOrders.add(ordersRepository.save(orders));
 
-            // 적립금 계산 및 저장 로직 추가
+            // 적립금 계산 및 저장 로직 수정
             int point = (int) (dto.getAmount() * 0.01); // 1% 적립
-            Customer customer = (Customer) customerRepository.findByUserId(users.getUserId())
+            Customer customer = customerRepository.findByUserId(users.getUserId())
                     .orElseGet(() -> Customer.builder()
                             .userId(users.getUserId())
                             .point(0)
@@ -298,7 +296,8 @@ public class OrdersServiceImpl implements OrdersService {
                 order.getProductsOption().getProductOptionId(),
                 order.getReq(),
                 order.getQuantity(),
-                order.getAmount()
+                order.getAmount(),
+                order.getUsePoint()
         );
     }
 

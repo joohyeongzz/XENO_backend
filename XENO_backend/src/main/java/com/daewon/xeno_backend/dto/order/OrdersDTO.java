@@ -12,7 +12,7 @@ public class OrdersDTO {
     private String orderPayId;
     private Long productOptionId;
     private String req;
-
     private int quantity;
     private Long amount;
+    private int usedPoint;
 }

@@ -28,8 +28,7 @@ import java.util.Map;
 @RestController
 @Log4j2
 @RequiredArgsConstructor
-//@RequestMapping("/api/orders")
-@RequestMapping("/orders")
+@RequestMapping("/api/orders")
 public class OrdersController {
 
     private final OrdersService ordersService;
@@ -72,9 +71,9 @@ public class OrdersController {
     }
 
     @PostMapping(produces = "application/json")
-    public ResponseEntity<?> createOrder(@RequestBody List<OrdersDTO> ordersDTO,
-                                         @RequestBody OrdersCreateDTO ordersCreateDTO,
-                                         @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<?> createOrder(
+                                        @RequestBody List<OrdersDTO> ordersDTO,
+                                        @AuthenticationPrincipal UserDetails userDetails) {
         try {
             String userEmail = userDetails.getUsername();
 
@@ -82,21 +81,15 @@ public class OrdersController {
                 .orElseThrow(() -> new UserNotFoundException("User not found")).getUserId())
                 .orElseThrow(() -> new UserNotFoundException("Customer not found"));
 
-            // 적립금 사용 로직
-            int usedPoint = ordersCreateDTO.getUsedPoint();
+            int usedPoint = ordersDTO.stream().mapToInt(OrdersDTO::getUsedPoint).sum();
             if (usedPoint > customer.getPoint()) {
-                return ResponseEntity.badRequest().body("사용 가능한 포인트가 초과했습니다.");
+                return ResponseEntity.status(400).body("사용 가능한 적립금이 부족합니다.");
             }
-
-            // 적립금 차감
             customer.setPoint(customer.getPoint() - usedPoint);
             customerRepository.save(customer);
 
-            // 주문 금액에서 적립금 차감
-            // long totalAmount = ordersCreateDTO.getAmount() - usedPoint;
-
-            List<OrdersDTO> ordersDTOList = ordersCreateDTO.getOrdersList();
-            ordersDTOList.forEach(dto -> dto.setAmount(dto.getAmount() - (usedPoint * dto.getAmount() / ordersCreateDTO.getAmount())));
+            // 상품 가격에서 사용한 적립금만큼 차감
+            ordersDTO.forEach(dto -> dto.setAmount(dto.getAmount() - dto.getUsedPoint()));
 
             List<OrdersDTO> createdOrder = ordersService.createOrders(ordersDTO, userEmail);
             return ResponseEntity.ok(createdOrder);
