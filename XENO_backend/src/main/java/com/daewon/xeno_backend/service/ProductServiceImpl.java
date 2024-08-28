@@ -15,6 +15,7 @@ import com.daewon.xeno_backend.dto.product.*;
 import com.daewon.xeno_backend.repository.*;
 import com.daewon.xeno_backend.repository.Products.*;
 
+import com.daewon.xeno_backend.repository.auth.UserRepository;
 import com.daewon.xeno_backend.utils.CategoryUtils;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
