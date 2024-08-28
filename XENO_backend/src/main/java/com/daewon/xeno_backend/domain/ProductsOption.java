@@ -24,8 +24,7 @@ public class ProductsOption {
     @OnDelete(action = OnDeleteAction.CASCADE)
     private Products products;
 
-    @Enumerated(EnumType.STRING)
-    private Size size;
+    private String size;
 
     private long stock;
 

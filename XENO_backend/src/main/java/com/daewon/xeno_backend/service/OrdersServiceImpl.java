@@ -255,7 +255,7 @@ public class OrdersServiceImpl implements OrdersService {
                 dto.setAmount(order.getAmount());
                 dto.setQuantity(order.getQuantity());
                 dto.setColor(order.getProductsOption().getProducts().getColor());
-                dto.setSize(order.getProductsOption().getSize().name());
+                dto.setSize(order.getProductsOption().getSize());
                 dto.setBrandName(order.getProductsOption().getProducts().getBrandName());
                 dto.setProductName(order.getProductsOption().getProducts().getName());
                 dto.setProductId(order.getProductsOption().getProducts().getProductId());
@@ -315,7 +315,7 @@ public class OrdersServiceImpl implements OrdersService {
                 dto.setOrderID(order.getOrderId());
                 dto.setOrderNumber(order.getOrderNumber());
                 dto.setQuantity(order.getQuantity());
-                dto.setSize(order.getProductsOption().getSize().name());
+                dto.setSize(order.getProductsOption().getSize());
                 dto.setColor(order.getProductsOption().getProducts().getColor());
                 dto.setStatus(order.getStatus());
                 dto.setProductName(order.getProductsOption().getProducts().getName());
