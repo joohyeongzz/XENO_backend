@@ -217,9 +217,6 @@ public class OrdersServiceImpl implements OrdersService {
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd");
 
-
-
-
                 for(Orders order : orders.getContent()) {
                 OrdersCardListDTO dto = new OrdersCardListDTO();
                 Review reviews = reviewRepository.findByUsersAndOrders(users,order);

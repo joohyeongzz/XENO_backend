@@ -66,7 +66,6 @@ public class ProductServiceImpl implements ProductService {
     private final ProductsSearchRepository productsSearchRepository;
     private final ProductsOptionRepository productsOptionRepository;
     private final ExcelService excelService;
-    private final AmazonS3 amazonS3Client;
 
     @Value("${aws.s3.bucket-name}")
     private String bucketName;
@@ -212,7 +211,6 @@ public class ProductServiceImpl implements ProductService {
             }
 
             for (ProductRegisterDTO dto : productList) {
-
                 Products existingProduct = productsRepository.findByProductNumber(dto.getProductNumber());
                 if (existingProduct == null) {
                     Products newProduct = Products.builder()
