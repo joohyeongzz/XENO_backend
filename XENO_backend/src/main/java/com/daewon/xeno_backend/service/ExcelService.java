@@ -563,6 +563,17 @@ public class ExcelService {
 
                 Cell cell11 = row.getCell(11);
                 Cell cell12 = row.getCell(12);
+                String trackingNumber = "";
+                if (cell12.getCellType() == CellType.NUMERIC) {
+                    double numericValue = cell12.getNumericCellValue();
+                    trackingNumber = String.valueOf((long)numericValue);
+                } else if (cell12.getCellType() == CellType.STRING) {
+                    String stringValue = cell12.getStringCellValue();
+                    trackingNumber = stringValue;
+                } else {
+                    // 다른 셀 타입 처리
+                }
+
 
                 if (cell11 == null || cell12 == null) {
                     throw new RuntimeException("필수 셀 값이 비어 있습니다. 행 번호: " + row.getRowNum());
@@ -570,7 +581,8 @@ public class ExcelService {
 
                 String carrierId = cell11.getStringCellValue();
                 // 숫자 값을 문자열로 변환
-                String trackingNumber = String.valueOf((long)cell12.getNumericCellValue());
+
+
 
                 String url = "https://apis.tracker.delivery/graphql";
 
