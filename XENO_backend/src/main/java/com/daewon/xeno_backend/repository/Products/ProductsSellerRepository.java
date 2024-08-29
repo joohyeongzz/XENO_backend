@@ -1,5 +1,6 @@
 package com.daewon.xeno_backend.repository.Products;
 
+import com.daewon.xeno_backend.domain.Products;
 import com.daewon.xeno_backend.domain.ProductsSeller;
 import com.daewon.xeno_backend.domain.auth.Users;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -10,5 +11,6 @@ public interface ProductsSellerRepository extends JpaRepository<ProductsSeller, 
 
     List<ProductsSeller> findByUsers(Users users);
 
+    ProductsSeller findByProducts(Products products);
 
 }

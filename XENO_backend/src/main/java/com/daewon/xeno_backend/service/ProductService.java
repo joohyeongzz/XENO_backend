@@ -54,9 +54,5 @@ public interface ProductService {
     UploadImageReadDTO getUploadImageByProductNumber(String productNumber);
 
 
-    void updateProductStock(List<ProductStockUpdateDTO> dto);
 
-
-
-    byte[] generateExcelFile() throws IOException;
 }
