@@ -92,7 +92,7 @@ public class OrdersServiceImpl implements OrdersService {
                 .build();
             savedOrders.add(ordersRepository.save(orders));
 
-            // 적립금 계산 및 저장 로직 수정
+            // 적립금 계산 및 저장 로직
             int point = (int) (dto.getAmount() * 0.01); // 1% 적립
             Customer customer = customerRepository.findByUserId(users.getUserId())
                     .orElseGet(() -> Customer.builder()
