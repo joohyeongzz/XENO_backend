@@ -21,4 +21,10 @@ public interface ManagerService {
 
     // user의 level(등급) 수정
     void updateUserLevelByManager(String managerEmail, Long userId, Level newLevel) throws UserNotFoundException, UnauthorizedException;
+
+    // brand 강제 탈퇴
+    String deleteBrandByManager(String managerEmail, Long brandIdToDelete, Long userIdToDelete) throws UserNotFoundException, UnauthorizedException;
+
+    // 상품 강제 삭제
+    void deleteProductByManager(String managerEmail, Long productIdToDelete) throws UserNotFoundException, UnauthorizedException;
 }

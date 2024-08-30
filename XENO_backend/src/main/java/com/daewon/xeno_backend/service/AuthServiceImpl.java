@@ -283,6 +283,7 @@ public class AuthServiceImpl implements AuthService {
         return dto;
     }
 
+    // 현재 삭제하려는 product에 관련된 데이터를 지우는 메서드
     @Transactional
     protected void deleteProductData(Products product) {
         log.info("누구임? " + product.getProductId());

@@ -4,6 +4,7 @@ import com.daewon.xeno_backend.domain.auth.Level;
 import com.daewon.xeno_backend.domain.auth.UserRole;
 import com.daewon.xeno_backend.dto.manager.LevelUpdateDTO;
 import com.daewon.xeno_backend.dto.manager.PointUpdateDTO;
+import com.daewon.xeno_backend.exception.BrandNotFoundException;
 import com.daewon.xeno_backend.exception.InvalidPointException;
 import com.daewon.xeno_backend.exception.UnauthorizedException;
 import com.daewon.xeno_backend.exception.UserNotFoundException;
@@ -16,6 +17,11 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
@@ -31,9 +37,10 @@ public class ManagerController {
     private final AuthService authService;
     private final ManagerService managerService;
     private final JWTUtil jwtUtil;
+    private final TransactionTemplate transactionTemplate;
 
     @PreAuthorize("hasRole('MANAGER')")
-    @DeleteMapping("/userDelete/{targetUserId}")
+    @DeleteMapping("/{targetUserId}")
     public ResponseEntity<?> deleteUser(Authentication authentication, @RequestHeader("Authorization") String token,
                                         @PathVariable Long targetUserId) {
 
@@ -91,6 +98,7 @@ public class ManagerController {
         }
     }
 
+    // 해당 targetUserId의 point를 조정하는 메서드
     @PreAuthorize("hasRole('MANAGER')")
     @PutMapping("/point/{targetUserId}")
     public ResponseEntity<String> updateUserPoint(Authentication authentication,
@@ -129,6 +137,8 @@ public class ManagerController {
                     .body("user point 조정 실패 : " + e.getMessage());
         }
     }
+
+    // 해당 targetUserId의 level를 변경하는 메서드
     @PreAuthorize("hasRole('MANAGER')")
     @PutMapping("/level/{targetUserId}")
     public ResponseEntity<String> updateUserLevel(Authentication authentication,
@@ -168,6 +178,32 @@ public class ManagerController {
             log.error("사용자 포인트 업데이트 중 오류 발생", e);
             return ResponseEntity.status(500)
                     .body("user level 변경 실패 : " + e.getMessage());
+        }
+    }
+
+    @PreAuthorize("hasRole('MANAGER')")
+    @DeleteMapping("/brand/{targetBrandId}")
+    public ResponseEntity<?> deleteBrand(Authentication authentication,
+                                         @PathVariable Long targetBrandId) {
+
+        try {
+            String result = transactionTemplate.execute(new TransactionCallback<String>() {
+                @Override
+                public String doInTransaction(TransactionStatus status) {
+                    try {
+                        return managerService.deleteBrandByManager(authentication.getName(), targetBrandId, null);
+                    } catch (Exception e) {
+                        status.setRollbackOnly();
+                        throw new RuntimeException(e);
+                    }
+                }
+            });
+
+            log.info("브랜드 삭제 성공. 관리자 이메일: {}, 브랜드 ID: {}", authentication.getName(), targetBrandId);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("브랜드 삭제 중 예기치 않은 오류 발생. 관리자 이메일: {}, 브랜드 ID: {}", authentication.getName(), targetBrandId, e);
+            return ResponseEntity.status(500).body("브랜드 삭제 중 오류가 발생했습니다: " + e.getMessage());
         }
     }
 }
