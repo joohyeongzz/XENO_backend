@@ -47,4 +47,5 @@ public class Orders extends BaseEntity {
   // 총 합 가격
   private Long amount;
 
+  private int usePoint;
 }
