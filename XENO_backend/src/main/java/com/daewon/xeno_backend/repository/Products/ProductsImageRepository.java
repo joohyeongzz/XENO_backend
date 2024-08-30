@@ -34,6 +34,9 @@ public interface ProductsImageRepository extends JpaRepository<ProductsImage, Lo
     @Query("SELECT u FROM ProductsImage u WHERE u.users = :users")
     List<ProductsImage> findByUsers(Users users);
 
+    @Query("SELECT p FROM ProductsImage p WHERE p.products IS NULL AND p.users = :users")
+    List<ProductsImage> findByProductsIsNullAndUsers(Users users);
+
     @Query("SELECT u FROM ProductsImage u WHERE u.products IS NULL")
     List<ProductsImage> findImagesWithoutProductId();
 

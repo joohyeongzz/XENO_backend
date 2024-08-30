@@ -5,20 +5,27 @@ import com.daewon.xeno_backend.dto.order.*;
 import com.daewon.xeno_backend.dto.page.PageInfinityResponseDTO;
 import com.daewon.xeno_backend.dto.page.PageRequestDTO;
 import com.daewon.xeno_backend.exception.UserNotFoundException;
+import com.daewon.xeno_backend.service.ExcelService;
 import com.daewon.xeno_backend.service.OrdersService;
 import com.daewon.xeno_backend.utils.JWTUtil;
 import io.jsonwebtoken.JwtException;
+import io.swagger.v3.oas.annotations.Operation;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -30,6 +37,7 @@ public class OrdersController {
 
     private final OrdersService ordersService;
     private final JWTUtil jwtUtil;
+    private final ExcelService excelService;
 
     @GetMapping
     public ResponseEntity<?> getAllOrders(@RequestHeader("Authorization") String token) {
@@ -158,6 +166,50 @@ public class OrdersController {
         }
     }
 
+
+    @PutMapping(value = "/tracking", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> updateOrder(@RequestPart(name = "excel") MultipartFile excel) {
+        // Check if the file is empty
+        if (excel.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("엑셀 파일이 업로드되지 않았습니다.");
+        }
+
+        // Validate file type
+        String contentType = excel.getContentType();
+        if (contentType == null || !contentType.equals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("유효하지 않은 파일 형식입니다. 엑셀 파일만 업로드할 수 있습니다.");
+        }
+
+        try {
+            // Process the file
+            excelService.parseOrderExcelFile(excel);
+            return ResponseEntity.ok("성공");
+        } catch (IOException e) {
+            // Log the exception and return a server error response
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("파일 처리 중 오류가 발생했습니다.");
+        } catch (Exception e) {
+            // Handle other exceptions
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("예상치 못한 오류가 발생했습니다.");
+        }
+    }
+
+    @Operation(summary = "판매자 주문 내역 엑셀 다운로드")
+    @GetMapping("/download/order-excel")
+    public void downloadOrderExcel(HttpServletResponse response) throws IOException {
+        byte[] excelFile = excelService.generateOrdersExcelFile();
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-Disposition", "attachment;filename=order.xlsx");
+        try (ServletOutputStream outputStream = response.getOutputStream()) {
+            outputStream.write(excelFile);
+            outputStream.flush();
+        }
+    }
 
 
 

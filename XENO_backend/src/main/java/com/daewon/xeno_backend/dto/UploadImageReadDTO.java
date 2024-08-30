@@ -21,8 +21,5 @@ public class UploadImageReadDTO {
     private String url_4;
     private String url_5;
     private String url_6;
-    private String detail_url_1;
-
-    private String createdAt;
-
+    private String detailUrl;
 }
