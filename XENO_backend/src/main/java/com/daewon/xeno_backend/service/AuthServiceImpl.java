@@ -241,7 +241,7 @@ public class AuthServiceImpl implements AuthService {
     public SellerInfoCardDTO readSellerInfo(UserDetails userDetails) {
         Users users = userRepository.findByEmail(userDetails.getUsername()).orElse(null);
         SellerInfoCardDTO dto = new SellerInfoCardDTO();
-//                dto.setBrandName(users.getBrandName());
+                dto.setBrandName(users.getBrand().getBrandName());
                 dto.setName(users.getName());
 
         return dto;

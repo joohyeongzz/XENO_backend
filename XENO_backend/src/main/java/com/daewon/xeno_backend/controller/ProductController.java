@@ -212,7 +212,7 @@ public class ProductController {
         try {
             // Process the file
             excelService.parseStockExcelFile(excel);
-            return ResponseEntity.ok("성공");
+            return ResponseEntity.ok("\"성공\"");
         } catch (IOException e) {
             // Log the exception and return a server error response
             e.printStackTrace();
