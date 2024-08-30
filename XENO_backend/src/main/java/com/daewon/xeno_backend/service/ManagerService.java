@@ -2,10 +2,13 @@ package com.daewon.xeno_backend.service;
 
 import com.daewon.xeno_backend.domain.auth.Level;
 import com.daewon.xeno_backend.domain.auth.UserRole;
+import com.daewon.xeno_backend.dto.manager.BrandListDTO;
 import com.daewon.xeno_backend.dto.manager.PointUpdateDTO;
+import com.daewon.xeno_backend.dto.manager.UserListDTO;
 import com.daewon.xeno_backend.exception.UnauthorizedException;
 import com.daewon.xeno_backend.exception.UserNotFoundException;
 
+import java.util.List;
 import java.util.Set;
 
 public interface ManagerService {
@@ -27,4 +30,10 @@ public interface ManagerService {
 
     // 상품 강제 삭제
     String deleteProductByManager(String managerEmail, Long productIdToDelete) throws UserNotFoundException, UnauthorizedException;
+
+    // user list 불러오기
+    List<UserListDTO> getAllUsers();
+
+    // brand list 불러오기
+    List<BrandListDTO> getAllBrands();
 }

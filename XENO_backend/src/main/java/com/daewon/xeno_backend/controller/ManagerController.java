@@ -2,8 +2,10 @@ package com.daewon.xeno_backend.controller;
 
 import com.daewon.xeno_backend.domain.auth.Level;
 import com.daewon.xeno_backend.domain.auth.UserRole;
+import com.daewon.xeno_backend.dto.manager.BrandListDTO;
 import com.daewon.xeno_backend.dto.manager.LevelUpdateDTO;
 import com.daewon.xeno_backend.dto.manager.PointUpdateDTO;
+import com.daewon.xeno_backend.dto.manager.UserListDTO;
 import com.daewon.xeno_backend.exception.*;
 import com.daewon.xeno_backend.service.AuthService;
 import com.daewon.xeno_backend.service.ManagerService;
@@ -22,6 +24,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -35,6 +38,20 @@ public class ManagerController {
     private final ManagerService managerService;
     private final JWTUtil jwtUtil;
     private final TransactionTemplate transactionTemplate;
+
+    // user List 불러오는 메서드
+    @PreAuthorize("hasRole('MANAGER')")
+    @GetMapping()
+    public ResponseEntity<List<UserListDTO>> getAllUsers() {
+        return ResponseEntity.ok(managerService.getAllUsers());
+    }
+
+    // brand List 불러오는 메서드
+    @PreAuthorize("hasRole('MANAGER')")
+    @GetMapping("/brand")
+    public ResponseEntity<List<BrandListDTO>> getAllBrands() {
+        return ResponseEntity.ok(managerService.getAllBrands());
+    }
 
     // user 강제 탈퇴 메서드
     @PreAuthorize("hasRole('MANAGER')")
