@@ -1,10 +1,13 @@
 package com.daewon.xeno_backend.controller;
 
+import com.daewon.xeno_backend.domain.auth.Customer;
 import com.daewon.xeno_backend.dto.auth.AuthSigninDTO;
 import com.daewon.xeno_backend.dto.order.*;
 import com.daewon.xeno_backend.dto.page.PageInfinityResponseDTO;
 import com.daewon.xeno_backend.dto.page.PageRequestDTO;
 import com.daewon.xeno_backend.exception.UserNotFoundException;
+import com.daewon.xeno_backend.repository.auth.CustomerRepository;
+import com.daewon.xeno_backend.repository.auth.UserRepository;
 import com.daewon.xeno_backend.service.ExcelService;
 import com.daewon.xeno_backend.service.OrdersService;
 import com.daewon.xeno_backend.utils.JWTUtil;
@@ -37,6 +40,8 @@ public class OrdersController {
 
     private final OrdersService ordersService;
     private final JWTUtil jwtUtil;
+    private final CustomerRepository customerRepository;
+    private final UserRepository userRepository;
     private final ExcelService excelService;
 
     @GetMapping
@@ -74,10 +79,26 @@ public class OrdersController {
     }
 
     @PostMapping(produces = "application/json")
-    public ResponseEntity<?> createOrder(@RequestBody List<OrdersDTO> ordersDTO,
-                                         @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<?> createOrder(
+                                        @RequestBody List<OrdersDTO> ordersDTO,
+                                        @AuthenticationPrincipal UserDetails userDetails) {
         try {
             String userEmail = userDetails.getUsername();
+
+            Customer customer = customerRepository.findByUserId(userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UserNotFoundException("User not found")).getUserId())
+                .orElseThrow(() -> new UserNotFoundException("Customer not found"));
+
+            int usedPoint = ordersDTO.stream().mapToInt(OrdersDTO::getUsedPoint).sum();
+            if (usedPoint > customer.getPoint()) {
+                return ResponseEntity.status(400).body("사용 가능한 적립금이 부족합니다.");
+            }
+            customer.setPoint(customer.getPoint() - usedPoint);
+            customerRepository.save(customer);
+
+            // 상품 가격에서 사용한 적립금만큼 차감
+            ordersDTO.forEach(dto -> dto.setAmount(dto.getAmount() - dto.getUsedPoint()));
+
             List<OrdersDTO> createdOrder = ordersService.createOrders(ordersDTO, userEmail);
             return ResponseEntity.ok(createdOrder);
         } catch (Exception e) {
