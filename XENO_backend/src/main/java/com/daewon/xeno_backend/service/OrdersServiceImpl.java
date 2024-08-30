@@ -164,7 +164,7 @@ public class OrdersServiceImpl implements OrdersService {
     }
 
     private GetOneDTO createGetOneDTO(Users users) {
-        return new GetOneDTO(users.getPhoneNumber(), users.getAddress());
+        return new GetOneDTO(users.getPhoneNumber(), users.getAddress(),users.getCustomer().getPoint());
     }
 
     // 주문번호 orderNumber 랜덤생성
@@ -285,7 +285,8 @@ public class OrdersServiceImpl implements OrdersService {
                 order.getProductsOption().getProductOptionId(),
                 order.getReq(),
                 order.getQuantity(),
-                order.getAmount()
+                order.getAmount(),
+                order.getUsePoint()
         );
     }
 
