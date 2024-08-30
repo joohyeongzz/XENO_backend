@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -232,16 +233,32 @@ public class OrdersController {
         }
     }
 
-    @Operation(summary = "판매자 주문 내역 엑셀 다운로드")
+
+    @Operation(summary = "판매자  주문내역 엑셀 다운로드")
     @GetMapping("/download/order-excel")
-    public void downloadOrderExcel(@RequestParam("year") int year,HttpServletResponse response) throws IOException {
-        byte[] excelFile = excelService.generateOrdersByYearExcelFile(year);
+    public void downloadOrderExcelByMonth( @RequestParam int startYear,
+                                           @RequestParam int startMonth,
+                                           @RequestParam int startDay,
+                                           @RequestParam int endYear,
+                                           @RequestParam int endMonth,
+                                           @RequestParam int endDay,HttpServletResponse response) throws IOException
+
+    {
+        LocalDate startDate = LocalDate.of(startYear, startMonth, startDay);
+        LocalDate endDate = LocalDate.of(endYear, endMonth, endDay);
+        byte[] excelFile = excelService.generateExcelForPeriod(startDate, endDate);
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         response.setHeader("Content-Disposition", "attachment;filename=order.xlsx");
         try (ServletOutputStream outputStream = response.getOutputStream()) {
             outputStream.write(excelFile);
             outputStream.flush();
         }
+    }
+
+    @GetMapping("/salesByYear")
+    public ResponseEntity<Map<Integer, Boolean>> getSalesByYear() {
+        Map<Integer, Boolean> salesByYear = ordersService.getSalesByYear();
+        return ResponseEntity.ok(salesByYear);
     }
 
 
