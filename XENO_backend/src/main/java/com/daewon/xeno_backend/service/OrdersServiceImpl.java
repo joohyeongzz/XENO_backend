@@ -29,10 +29,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -329,8 +326,10 @@ public class OrdersServiceImpl implements OrdersService {
         ordersRepository.save(orders);
 
         log.info(orders);
+    }
 
-
-
+    @Override
+    public Map<Integer, Boolean> getSalesByYear() {
+        return Map.of();
     }
 }

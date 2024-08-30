@@ -7,6 +7,7 @@ import com.daewon.xeno_backend.dto.page.PageRequestDTO;
 import com.daewon.xeno_backend.dto.product.ProductHeaderDTO;
 
 import java.util.List;
+import java.util.Map;
 
 public interface OrdersService {
 
@@ -29,6 +30,8 @@ public interface OrdersService {
     void updateOrderStatusBySeller(OrdersStatusUpdateDTO dto);
 
     String getLatestReqForUser(String email);
+
+    Map<Integer, Boolean> getSalesByYear();
 
 
 }

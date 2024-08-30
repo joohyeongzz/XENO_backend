@@ -33,7 +33,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.Month;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -659,7 +661,7 @@ public class ExcelService {
         }
     }
 
-    public byte[] generateOrdersByYearExcelFile(int year) throws IOException {
+    public byte[] generateExcelForPeriod(LocalDate startDate, LocalDate endDate) throws IOException {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String currentUserName = authentication.getName();
@@ -703,24 +705,24 @@ public class ExcelService {
         List<ProductsSeller> products = productsSellerRepository.findByUsers(users);
         log.info(products);
 
-                LocalDateTime startDate = LocalDateTime.of(year, Month.JANUARY, 1, 0, 0);
-                LocalDateTime endDate = LocalDateTime.of(year, Month.DECEMBER, 31, 23, 59, 59);
-                List<Orders> ordersList = ordersRepository.findOrdersByYear(startDate,endDate,users);
-                log.info(ordersList);
-                for(Orders order : ordersList) {
-                    Row row = sheet.createRow(rowIndex++);
-                    row.createCell(0).setCellValue(order.getOrderNumber());
-                    row.createCell(1).setCellValue(order.getCreateAt().toString());
-                    row.createCell(2).setCellValue(order.getAmount());
-                    row.createCell(3).setCellValue(order.getQuantity());
-                    row.createCell(4).setCellValue(order.getReq());
-                    row.createCell(5).setCellValue(order.getStatus());
-                    row.createCell(6).setCellValue(order.getProductsOption().getProducts().getProductNumber());
-                    row.createCell(7).setCellValue(order.getProductsOption().getProducts().getName());
-                    row.createCell(8).setCellValue(order.getProductsOption().getProducts().getColor());
-                    row.createCell(9).setCellValue(order.getProductsOption().getSize());
-                    row.createCell(10).setCellValue(order.getCustomer().getName());
-                }
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+        List<Orders> ordersList = ordersRepository.findBySellerIdAndDateRange(users,startDateTime,endDateTime);
+        log.info(ordersList);
+        for(Orders order : ordersList) {
+            Row row = sheet.createRow(rowIndex++);
+            row.createCell(0).setCellValue(order.getOrderNumber());
+            row.createCell(1).setCellValue(order.getCreateAt().toString());
+            row.createCell(2).setCellValue(order.getAmount());
+            row.createCell(3).setCellValue(order.getQuantity());
+            row.createCell(4).setCellValue(order.getReq());
+            row.createCell(5).setCellValue(order.getStatus());
+            row.createCell(6).setCellValue(order.getProductsOption().getProducts().getProductNumber());
+            row.createCell(7).setCellValue(order.getProductsOption().getProducts().getName());
+            row.createCell(8).setCellValue(order.getProductsOption().getProducts().getColor());
+            row.createCell(9).setCellValue(order.getProductsOption().getSize());
+            row.createCell(10).setCellValue(order.getCustomer().getName());
+        }
         Row totalRow = sheet.createRow(rowIndex++);
 
 // 매출 합계 레이블을 C열에 설정
