@@ -1085,7 +1085,7 @@ public class ProductServiceImpl implements ProductService {
         }
 
         Users users = optionalUser.get();
-        List<ProductsImage> images = productsImageRepository.findByUsers(users);
+        List<ProductsImage> images = productsImageRepository.findByProductsIsNullAndUsers(users);
 
         return images.stream()
                 .map(this::convertToUploadImageReadDTO)
@@ -1116,152 +1116,8 @@ public class ProductServiceImpl implements ProductService {
         dto.setUrl_4(image.getUrl_4());
         dto.setUrl_5(image.getUrl_5());
         dto.setUrl_6(image.getUrl_6());
-        dto.setDetail_url_1(image.getDetail_url());
+        dto.setDetailUrl(image.getDetail_url());
         return dto;
     }
-
-
-    public byte[] generateExcelFile() throws IOException {
-
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String currentUserName = authentication.getName();
-        Optional<Users> optionalUser = userRepository.findByEmail(currentUserName);
-        if (optionalUser.isEmpty()) {
-            throw new RuntimeException("User not found: " + currentUserName);
-        }
-
-        Users users = optionalUser.get();
-
-        List<ProductsSeller> products = productsSellerRepository.findByUsers(users);
-
-        Workbook workbook = new XSSFWorkbook();
-        Sheet sheet = workbook.createSheet("Sheet1");
-        sheet.setDefaultColumnWidth(10);
-
-        // Header data
-        int rowCount = 0;
-        String headerNames[] = new String[]{
-                "품번",
-                "상품 이름",
-                "카테고리",
-                "서브 카테고리",
-                "가격",
-                "할인 가격",
-                "색상",
-                "사이즈",
-                "재고",
-                "이미지1",
-                "이미지2",
-                "이미지3",
-                "이미지4",
-                "이미지5",
-                "이미지6",
-                "상세이미지6",
-                "시즌"
-        };
-
-        Row headerRow = sheet.createRow(rowCount++);
-        for (int i = 0; i < headerNames.length; i++) {
-            Cell headerCell = headerRow.createCell(i);
-            headerCell.setCellValue(headerNames[i]);
-        }
-
-        // 카테고리와 서브 카테고리 데이터
-        String[] categories = {"상의", "하의", "아우터"};
-
-        // 카테고리 드롭다운 설정
-        DataValidationHelper validationHelper = sheet.getDataValidationHelper();
-        DataValidationConstraint categoryConstraint = validationHelper.createExplicitListConstraint(categories);
-        CellRangeAddressList categoryAddressList = new CellRangeAddressList(1, 100, 2, 2); // C열에 적용
-        DataValidation categoryValidation = validationHelper.createValidation(categoryConstraint, categoryAddressList);
-        categoryValidation.setShowErrorBox(true);
-        sheet.addValidationData(categoryValidation);
-
-        String[] subCategoriesTops = {"반팔", "긴팔"};
-        String[] subCategoriesBottoms = {"청바지", "면", "반바지", "나일론"};
-        String[] subCategoriesOuterwear = {"코트", "후드집업", "바람막이",};
-
-
-
-        int rowIndex = 1;
-        for (ProductsSeller product : products) {
-            Row row = sheet.createRow(rowIndex++);
-
-
-
-            row.createCell(0).setCellValue(product.getProducts().getProductNumber());
-            row.createCell(1).setCellValue(product.getProducts().getName());
-            row.createCell(2).setCellValue(product.getProducts().getCategory());
-            row.createCell(3).setCellValue(product.getProducts().getCategorySub());
-            row.createCell(4).setCellValue(product.getProducts().getPrice());
-            row.createCell(5).setCellValue(product.getProducts().getPriceSale() != 0 ? product.getProducts().getPriceSale() : 0);
-            row.createCell(6).setCellValue(product.getProducts().getColor());
-
-
-
-            List<ProductsOption> productsOptions = productsOptionRepository.findByProductId(product.getProducts().getProductId());
-
-            // Collect sizes and stocks
-            String sizes = productsOptions.stream()
-                    .map(ProductsOption::getSize)
-                    .collect(Collectors.joining(","));
-            String stocks = productsOptions.stream()
-                    .map(option -> String.valueOf(option.getStock()))
-                    .collect(Collectors.joining(","));
-
-            // Set sizes and stocks in the row
-            row.createCell(7).setCellValue(sizes);
-            row.createCell(8).setCellValue(stocks);
-
-            ProductsImage productsImage = productsImageRepository.findByProductId(product.getProducts().getProductId());
-
-            row.createCell(9).setCellValue(productsImage.getUrl_1() == null ? "" : productsImage.getUrl_1());
-            row.createCell(10).setCellValue(productsImage.getUrl_2() == null ? "" : productsImage.getUrl_2());
-            row.createCell(11).setCellValue(productsImage.getUrl_3() == null ? "" : productsImage.getUrl_3());
-            row.createCell(12).setCellValue(productsImage.getUrl_4() == null ? "" : productsImage.getUrl_4());
-            row.createCell(13).setCellValue(productsImage.getUrl_5() == null ? "" : productsImage.getUrl_5());
-            row.createCell(14).setCellValue(productsImage.getUrl_6() == null ? "" : productsImage.getUrl_6());
-            row.createCell(15).setCellValue(productsImage.getDetail_url() == null ? "" : productsImage.getDetail_url());
-            row.createCell(16).setCellValue(product.getProducts().getSeason());
-
-            }
-
-        // Write to ByteArrayOutputStream
-        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-            workbook.write(outputStream);
-            workbook.close();
-            return outputStream.toByteArray();
-        }
-    }
-
-    @Override
-    public void updateProductStock(List<ProductStockUpdateDTO> dtoList) {
-        for (ProductStockUpdateDTO dto : dtoList) {
-            List<ProductSizeDTO> sizeList = dto.getSizeList();
-
-            // 데이터베이스에서 현재 사이즈 옵션 리스트를 가져옵니다.
-            List<ProductsOption> productsOptions = productsOptionRepository.findByProductId(dto.getProductId());
-
-            // 데이터베이스에서 사이즈별로 빠르게 접근할 수 있는 맵을 생성합니다.
-            Map<String, ProductsOption> productsOptionMap = productsOptions.stream()
-                    .collect(Collectors.toMap(ProductsOption::getSize, Function.identity()));
-
-            // DTO에서 사이즈와 재고를 가져와서 업데이트합니다.
-            for (ProductSizeDTO sizeDTO : sizeList) {
-                String size = sizeDTO.getSize();
-                long stock = sizeDTO.getStock();
-
-                // 사이즈가 데이터베이스에 존재하는 경우에만 재고를 업데이트합니다.
-                ProductsOption productsOption = productsOptionMap.get(size);
-                if (productsOption != null) {
-                    // 사이즈가 데이터베이스에 존재하면 재고를 업데이트합니다.
-                    productsOption.setStock(stock);
-                    productsOptionRepository.save(productsOption);
-                }
-                // 사이즈가 데이터베이스에 없으면 아무 것도 하지 않음
-            }
-        }
-    }
-
 
 }

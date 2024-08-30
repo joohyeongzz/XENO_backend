@@ -27,14 +27,15 @@ public interface ProductsImageRepository extends JpaRepository<ProductsImage, Lo
     // 또는 여러 이미지 ID로 조회
     List<ProductsImage> findByProductImageIdIn(List<Long> productImageIds);
 
-    void deleteByProducts(Products products);
-
     @Query("SELECT u FROM ProductsImage u WHERE u.productNumber = :productNumber AND u.users = :users")
     ProductsImage findByProductNumberAndUsers(String productNumber, Users users);
 
 
     @Query("SELECT u FROM ProductsImage u WHERE u.users = :users")
     List<ProductsImage> findByUsers(Users users);
+
+    @Query("SELECT p FROM ProductsImage p WHERE p.products IS NULL AND p.users = :users")
+    List<ProductsImage> findByProductsIsNullAndUsers(Users users);
 
     @Query("SELECT u FROM ProductsImage u WHERE u.products IS NULL")
     List<ProductsImage> findImagesWithoutProductId();
@@ -46,5 +47,8 @@ public interface ProductsImageRepository extends JpaRepository<ProductsImage, Lo
 
     @Query("SELECT p FROM ProductsImage p WHERE p.products.productId = :productId")
     Page<ProductsImage> findByProductIdPaging(Long productId, Pageable pageable);
+
+    // 특정 제품과 관련된 모든 이미지를 삭제하는 메서드
+    void deleteByProducts(Products products);
 
 }

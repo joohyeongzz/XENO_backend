@@ -1,23 +1,63 @@
 package com.daewon.xeno_backend.service;
 
 
+import com.daewon.xeno_backend.domain.*;
+import com.daewon.xeno_backend.domain.auth.Users;
 import com.daewon.xeno_backend.dto.product.ProductRegisterDTO;
 import com.daewon.xeno_backend.dto.product.ProductSizeDTO;
+import com.daewon.xeno_backend.repository.DeliveryTrackRepository;
+import com.daewon.xeno_backend.repository.OrdersRepository;
+import com.daewon.xeno_backend.repository.Products.ProductsImageRepository;
+import com.daewon.xeno_backend.repository.Products.ProductsOptionRepository;
+import com.daewon.xeno_backend.repository.Products.ProductsSellerRepository;
+import com.daewon.xeno_backend.repository.auth.UserRepository;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.transaction.Transactional;
 import lombok.extern.log4j.Log4j2;
 import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.util.CellRangeAddressList;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.FileInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Log4j2
 public class ExcelService {
+
+    private final ProductsImageRepository productsImageRepository;
+    private final ProductsOptionRepository productsOptionRepository;
+    private final ProductsSellerRepository productsSellerRepository;
+    private final UserRepository userRepository;
+    private final OrdersRepository ordersRepository;
+    private final RestTemplate restTemplate = new RestTemplate();
+    private final ObjectMapper jacksonObjectMapper;
+    private final DeliveryTrackRepository deliveryTrackRepository;
+
+    public ExcelService(ProductsImageRepository productsImageRepository, ProductsOptionRepository productsOptionRepository, ProductsSellerRepository productsSellerRepository, UserRepository userRepository, OrdersRepository ordersRepository, ObjectMapper jacksonObjectMapper, DeliveryTrackRepository deliveryTrackRepository) {
+        this.productsImageRepository = productsImageRepository;
+        this.productsOptionRepository = productsOptionRepository;
+        this.productsSellerRepository = productsSellerRepository;
+        this.userRepository = userRepository;
+        this.ordersRepository = ordersRepository;
+        this.jacksonObjectMapper = jacksonObjectMapper;
+        this.deliveryTrackRepository = deliveryTrackRepository;
+    }
 
     public List<ProductRegisterDTO> parseExcelFile(MultipartFile excel) throws IOException {
         List<ProductRegisterDTO> productList = new ArrayList<>();
@@ -114,6 +154,510 @@ public class ExcelService {
                 return "";
         }
     }
+
+    public byte[] generateExcelFile() throws IOException {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserName = authentication.getName();
+        Optional<Users> optionalUser = userRepository.findByEmail(currentUserName);
+        if (optionalUser.isEmpty()) {
+            throw new RuntimeException("User not found: " + currentUserName);
+        }
+
+        Users users = optionalUser.get();
+
+        List<ProductsSeller> products = productsSellerRepository.findByUsers(users);
+
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Sheet1");
+        sheet.setDefaultColumnWidth(10);
+
+        // Header data
+        int rowCount = 0;
+        String headerNames[] = new String[]{
+                "품번",
+                "상품 이름",
+                "카테고리",
+                "서브 카테고리",
+                "가격",
+                "할인 가격",
+                "색상",
+                "사이즈",
+                "재고",
+                "이미지1",
+                "이미지2",
+                "이미지3",
+                "이미지4",
+                "이미지5",
+                "이미지6",
+                "상세이미지",
+                "시즌"
+        };
+
+        Row headerRow = sheet.createRow(rowCount++);
+        for (int i = 0; i < headerNames.length; i++) {
+            Cell headerCell = headerRow.createCell(i);
+            headerCell.setCellValue(headerNames[i]);
+        }
+
+        // 카테고리와 서브 카테고리 데이터
+        String[] categories = {"상의", "하의", "아우터"};
+
+        // 카테고리 드롭다운 설정
+        DataValidationHelper validationHelper = sheet.getDataValidationHelper();
+        DataValidationConstraint categoryConstraint = validationHelper.createExplicitListConstraint(categories);
+        CellRangeAddressList categoryAddressList = new CellRangeAddressList(1, 100, 2, 2); // C열에 적용
+        DataValidation categoryValidation = validationHelper.createValidation(categoryConstraint, categoryAddressList);
+        categoryValidation.setShowErrorBox(true);
+        sheet.addValidationData(categoryValidation);
+
+        int rowIndex = 1;
+        for (ProductsSeller product : products) {
+            Row row = sheet.createRow(rowIndex++);
+            row.createCell(0).setCellValue(product.getProducts().getProductNumber());
+            row.createCell(1).setCellValue(product.getProducts().getName());
+            row.createCell(2).setCellValue(product.getProducts().getCategory());
+            row.createCell(3).setCellValue(product.getProducts().getCategorySub());
+            row.createCell(4).setCellValue(product.getProducts().getPrice());
+            row.createCell(5).setCellValue(product.getProducts().getPriceSale() != 0 ? product.getProducts().getPriceSale() : 0);
+            row.createCell(6).setCellValue(product.getProducts().getColor());
+
+            List<ProductsOption> productsOptions = productsOptionRepository.findByProductId(product.getProducts().getProductId());
+
+            // Collect sizes and stocks
+            String sizes = productsOptions.stream()
+                    .map(ProductsOption::getSize)
+                    .collect(Collectors.joining(","));
+            String stocks = productsOptions.stream()
+                    .map(option -> String.valueOf(option.getStock()))
+                    .collect(Collectors.joining(","));
+
+            // Set sizes and stocks in the row
+            row.createCell(7).setCellValue(sizes);
+            row.createCell(8).setCellValue(stocks);
+
+            ProductsImage productsImage = productsImageRepository.findByProductId(product.getProducts().getProductId());
+
+            row.createCell(9).setCellValue(productsImage.getUrl_1() == null ? "" : productsImage.getUrl_1());
+            row.createCell(10).setCellValue(productsImage.getUrl_2() == null ? "" : productsImage.getUrl_2());
+            row.createCell(11).setCellValue(productsImage.getUrl_3() == null ? "" : productsImage.getUrl_3());
+            row.createCell(12).setCellValue(productsImage.getUrl_4() == null ? "" : productsImage.getUrl_4());
+            row.createCell(13).setCellValue(productsImage.getUrl_5() == null ? "" : productsImage.getUrl_5());
+            row.createCell(14).setCellValue(productsImage.getUrl_6() == null ? "" : productsImage.getUrl_6());
+            row.createCell(15).setCellValue(productsImage.getDetail_url() == null ? "" : productsImage.getDetail_url());
+            row.createCell(16).setCellValue(product.getProducts().getSeason());
+
+        }
+
+        // Write to ByteArrayOutputStream
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            workbook.write(outputStream);
+            workbook.close();
+            return outputStream.toByteArray();
+        }
+    }
+
+    public byte[] newGenerateExcelFile() throws IOException {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserName = authentication.getName();
+        Optional<Users> optionalUser = userRepository.findByEmail(currentUserName);
+        if (optionalUser.isEmpty()) {
+            throw new RuntimeException("User not found: " + currentUserName);
+        }
+
+        Users users = optionalUser.get();
+
+        List<ProductsSeller> products = productsSellerRepository.findByUsers(users);
+
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Sheet1");
+        sheet.setDefaultColumnWidth(10);
+
+        // Header data
+        int rowCount = 0;
+        String headerNames[] = new String[]{
+                "품번",
+                "상품 이름",
+                "카테고리",
+                "서브 카테고리",
+                "가격",
+                "할인 가격",
+                "색상",
+                "사이즈",
+                "재고",
+                "이미지1",
+                "이미지2",
+                "이미지3",
+                "이미지4",
+                "이미지5",
+                "이미지6",
+                "상세이미지",
+                "시즌"
+        };
+
+        Row headerRow = sheet.createRow(rowCount++);
+        for (int i = 0; i < headerNames.length; i++) {
+            Cell headerCell = headerRow.createCell(i);
+            headerCell.setCellValue(headerNames[i]);
+        }
+
+        // Write to ByteArrayOutputStream
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            workbook.write(outputStream);
+            workbook.close();
+            return outputStream.toByteArray();
+        }
+    }
+
+
+    // 재고 엑셀 다운
+    public byte[] generateStockExcelFile() throws IOException {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserName = authentication.getName();
+        Optional<Users> optionalUser = userRepository.findByEmail(currentUserName);
+        if (optionalUser.isEmpty()) {
+            throw new RuntimeException("User not found: " + currentUserName);
+        }
+
+        Users users = optionalUser.get();
+
+        List<ProductsSeller> products = productsSellerRepository.findByUsers(users);
+
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Sheet1");
+        sheet.setDefaultColumnWidth(10);
+
+
+        int rowCount = 0;
+        String[] headerNames = new String[]{
+                "상품 코드",
+                "품번",
+                "상품 이름",
+                "사이즈",
+                "재고"
+        };
+
+        Row headerRow = sheet.createRow(rowCount++);
+        for (int i = 0; i < headerNames.length; i++) {
+            Cell headerCell = headerRow.createCell(i);
+            headerCell.setCellValue(headerNames[i]);
+        }
+
+        int rowIndex = 1;
+        for (ProductsSeller product : products) {
+            List<ProductsOption> productsOptions = productsOptionRepository.findByProductId(product.getProducts().getProductId());
+            for (ProductsOption productsOption : productsOptions) {
+                Row row = sheet.createRow(rowIndex++);
+                row.createCell(0).setCellValue(productsOption.getProductOptionId());
+                row.createCell(1).setCellValue(product.getProducts().getProductNumber());
+                row.createCell(2).setCellValue(product.getProducts().getName());
+                row.createCell(3).setCellValue(productsOption.getSize());
+                row.createCell(4).setCellValue(productsOption.getStock());
+            }
+        }
+
+
+        CellStyle lockedCellStyle = workbook.createCellStyle();
+        lockedCellStyle.setLocked(true);
+
+        for (Row row : sheet) {
+            if (row.getRowNum() > 0) { // Skip header row
+                for (int colIndex = 0; colIndex <= 3; colIndex++) { // Protect columns 0, 1, 2, 3
+                    Cell cell = row.getCell(colIndex);
+                    if (cell != null) {
+                        cell.setCellStyle(lockedCellStyle);
+                    }
+                }
+            }
+        }
+
+        CellStyle unlockedCellStyle = workbook.createCellStyle();
+        unlockedCellStyle.setLocked(false); // Allow editing
+        for (Row row : sheet) {
+            if (row.getRowNum() > 0) { // Skip header row
+                Cell stockCell = row.getCell(4);
+                if (stockCell != null) {
+                    stockCell.setCellStyle(unlockedCellStyle);
+                }
+            }
+        }
+
+        DataValidationHelper validationHelper = sheet.getDataValidationHelper();
+        DataValidationConstraint constraint = validationHelper.createNumericConstraint(
+                DataValidationConstraint.ValidationType.INTEGER,
+                DataValidationConstraint.OperatorType.BETWEEN,
+                "0",
+                "1000000"
+        );
+
+        CellRangeAddressList addressList = new CellRangeAddressList(1, sheet.getLastRowNum(), 4, 4); // Apply to entire column E
+        DataValidation validation = validationHelper.createValidation(constraint, addressList);
+        validation.setShowErrorBox(true);
+        sheet.addValidationData(validation);
+
+
+        sheet.protectSheet("password");
+
+
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            workbook.write(outputStream);
+            workbook.close();
+            return outputStream.toByteArray();
+        }
+    }
+
+    @Transactional
+    public void parseStockExcelFile(MultipartFile excel) throws IOException {
+        if (excel.isEmpty()) {
+            throw new RuntimeException("업로드된 파일이 비어 있습니다.");
+        }
+
+        try (InputStream fis = excel.getInputStream(); Workbook workbook = new XSSFWorkbook(fis)) {
+            Sheet sheet = workbook.getSheetAt(0);
+
+            if (sheet == null) {
+                throw new RuntimeException("엑셀 시트가 존재하지 않습니다.");
+            }
+
+            // 헤더 행 검사
+            Row headerRow = sheet.getRow(0);
+            if (headerRow == null) {
+                throw new RuntimeException("헤더 행이 존재하지 않습니다.");
+            }
+
+            // 헤더 셀 검사 (필요한 열 개수에 따라 수정)
+            for (int i = 0; i <= 4; i++) {
+                Cell headerCell = headerRow.getCell(i);
+                if (headerCell == null || headerCell.getStringCellValue().trim().isEmpty()) {
+                    throw new RuntimeException("헤더 셀이 비어 있습니다. 셀 인덱스: " + i);
+                }
+            }
+
+            for (Row row : sheet) {
+                // 첫 번째 행(헤더)은 건너뜀
+                if (row.getRowNum() == 0) continue;
+
+                // 비어 있는 행 건너뜀
+                if (row.getCell(0) == null || row.getCell(0).getCellType() == CellType.STRING) {
+                    throw new RuntimeException("Product option ID not found in row " + row.getRowNum());
+                }
+
+                Cell cell = row.getCell(0);
+                if (cell == null) {
+                    throw new RuntimeException("Product option ID not found in row " + row.getRowNum());
+                } else {
+                    try {
+                        long productOptionId = (long) cell.getNumericCellValue();
+                        ProductsOption productsOption = productsOptionRepository.findById(productOptionId).orElse(null);
+
+                        if (productsOption != null) {
+                            Cell stockCell = row.getCell(4);
+                            if (stockCell != null) {
+                                productsOption.setStock((long) stockCell.getNumericCellValue());
+                                productsOptionRepository.save(productsOption);
+                            } else {
+                                throw new RuntimeException("Stock value not found in row " + row.getRowNum());
+                            }
+                        } else {
+                            throw new RuntimeException("Product option with ID " + productOptionId + " not found.");
+                        }
+                    } catch (Exception e) {
+                        throw new RuntimeException("Error processing row " + row.getRowNum() + ": " + e.getMessage(), e);
+                    }
+                }
+            }
+        }
+    }
+
+    public byte[] generateOrdersExcelFile() throws IOException {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserName = authentication.getName();
+        Optional<Users> optionalUser = userRepository.findByEmail(currentUserName);
+
+        if (optionalUser.isEmpty()) {
+            throw new RuntimeException("User not found: " + currentUserName);
+        }
+
+        Users users = optionalUser.get();
+
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Sheet1");
+        sheet.setDefaultColumnWidth(10);
+
+        // Header data
+        int rowCount = 0;
+        String headerNames[] = new String[]{
+                "주문 번호",
+                "결제 시간",
+                "가격",
+                "수량",
+                "요청 사항",
+                "배송 상태",
+                "품번",
+                "상품 이름",
+                "색상",
+                "사이즈",
+                "구매자",
+                "택배사",
+                "운송장 번호"
+        };
+
+        Row headerRow = sheet.createRow(rowCount++);
+        for (int i = 0; i < headerNames.length; i++) {
+            Cell headerCell = headerRow.createCell(i);
+            headerCell.setCellValue(headerNames[i]);
+        }
+
+        int rowIndex = 1;
+
+        List<ProductsSeller> products = productsSellerRepository.findByUsers(users);
+        log.info(products);
+        for(ProductsSeller productsSeller : products) {
+            List<ProductsOption> productsOptions = productsOptionRepository.findByProductId(productsSeller.getProducts().getProductId());
+            log.info(productsOptions);
+            for(ProductsOption productsOption : productsOptions) {
+                List<Orders> ordersList = ordersRepository.findByStatusAndProductsOption("결제 완료",productsOption);
+                log.info(ordersList);
+                for(Orders order : ordersList) {
+                    Row row = sheet.createRow(rowIndex++);
+                    row.createCell(0).setCellValue(order.getOrderNumber());
+                    row.createCell(1).setCellValue(order.getCreateAt().toString());
+                    row.createCell(2).setCellValue(order.getAmount());
+                    row.createCell(3).setCellValue(order.getQuantity());
+                    row.createCell(4).setCellValue(order.getReq());
+                    row.createCell(5).setCellValue(order.getStatus());
+                    row.createCell(6).setCellValue(order.getProductsOption().getProducts().getProductNumber());
+                    row.createCell(7).setCellValue(order.getProductsOption().getProducts().getName());
+                    row.createCell(8).setCellValue(order.getProductsOption().getProducts().getColor());
+                    row.createCell(9).setCellValue(order.getProductsOption().getSize());
+                    row.createCell(10).setCellValue(order.getUser().getName());
+                    row.createCell(11).setCellValue("");
+                    row.createCell(12).setCellValue("");
+                }
+            }
+        }
+
+        // Write to ByteArrayOutputStream
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            workbook.write(outputStream);
+            workbook.close();
+            return outputStream.toByteArray();
+        }
+    }
+
+    @Transactional
+    public void parseOrderExcelFile(MultipartFile excel) throws IOException {
+        if (excel.isEmpty()) {
+            throw new RuntimeException("업로드된 파일이 비어 있습니다.");
+        }
+
+        try (InputStream fis = excel.getInputStream(); Workbook workbook = new XSSFWorkbook(fis)) {
+            Sheet sheet = workbook.getSheetAt(0);
+
+            for (Row row : sheet) {
+                // 첫 번째 행(헤더)은 건너뜀
+                if (row.getRowNum() == 0) continue;
+
+                Cell cell11 = row.getCell(11);
+                Cell cell12 = row.getCell(12);
+                String trackingNumber = "";
+                if (cell12.getCellType() == CellType.NUMERIC) {
+                    double numericValue = cell12.getNumericCellValue();
+                    trackingNumber = String.valueOf((long)numericValue);
+                } else if (cell12.getCellType() == CellType.STRING) {
+                    String stringValue = cell12.getStringCellValue();
+                    trackingNumber = stringValue;
+                } else {
+                    // 다른 셀 타입 처리
+                }
+
+
+                if (cell11 == null || cell12 == null) {
+                    throw new RuntimeException("필수 셀 값이 비어 있습니다. 행 번호: " + row.getRowNum());
+                }
+
+                String carrierId = cell11.getStringCellValue();
+                // 숫자 값을 문자열로 변환
+
+
+
+                String url = "https://apis.tracker.delivery/graphql";
+
+                // HTTP 헤더 설정
+                HttpHeaders headers = new HttpHeaders();
+                headers.set("Content-Type", "application/json");
+                headers.set("Authorization", "TRACKQL-API-KEY 97vetlqkkgltulpe7tmfq9pr2:3ii271qrmmir9pvnsj23s34cvv2l3nokhhn9desbbtkb08cqjoi");
+
+                // GraphQL 요청 내용
+                String query = "query Track($carrierId: ID!, $trackingNumber: String!) {" +
+                        "track(carrierId: $carrierId, trackingNumber: $trackingNumber) {" +
+                        "lastEvent {" +
+                        "time " +
+                        "status {" +
+                        "code " +
+                        "}" +
+                        "}" +
+                        "}" +
+                        "}";
+
+                // 요청 바디 작성
+                Map<String, Object> variables = new HashMap<>();
+                variables.put("carrierId", carrierId);
+                variables.put("trackingNumber", trackingNumber); // 문자열로 변환된 trackingNumber
+
+                Map<String, Object> body = new HashMap<>();
+                body.put("query", query);
+                body.put("variables", variables);
+
+                HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+
+                try {
+                    // API 요청
+                    ResponseEntity<String> response = restTemplate.exchange(
+                            url,
+                            HttpMethod.POST,
+                            entity,
+                            String.class
+                    );
+
+                    String responseBody = response.getBody();
+                    if (responseBody != null) {
+                        JsonNode jsonNode = jacksonObjectMapper.readTree(responseBody);
+                        JsonNode errorsNode = jsonNode.path("errors");
+                        JsonNode dataNode = jsonNode.path("data").path("track");
+
+                        // 처리 성공 여부 확인
+                        if (errorsNode.isArray() && errorsNode.size() > 0) {
+                            JsonNode firstError = errorsNode.get(0);
+                            String errorMessage = firstError.path("message").asText();
+                            log.error("Error message: " + errorMessage);
+                        } else {
+                            Orders order = ordersRepository.findByOrderNumber((long)row.getCell(0).getNumericCellValue());
+                            order.setStatus("출고 완료");
+                            ordersRepository.save(order);
+                            DeliveryTrack deliveryTrack = DeliveryTrack.builder()
+                                  .carrierId(carrierId)
+                                  .trackingNumber(trackingNumber)
+                                  .order(order)
+                                  .build();
+                           deliveryTrackRepository.save(deliveryTrack);
+                        }
+                    } else {
+                        log.warn("Response body is null.");
+                    }
+                } catch (HttpClientErrorException | HttpServerErrorException e) {
+                    log.error("HTTP error during API request: " + e.getMessage(), e);
+                } catch (Exception e) {
+                    log.error("Unexpected error: " + e.getMessage(), e);
+                }
+            }
+        }
+    }
+
+
 }
 
 

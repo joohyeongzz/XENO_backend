@@ -1,6 +1,7 @@
 package com.daewon.xeno_backend.repository;
 
 import com.daewon.xeno_backend.domain.Orders;
+import com.daewon.xeno_backend.domain.ProductsOption;
 import com.daewon.xeno_backend.domain.auth.Users;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -32,6 +33,17 @@ public interface OrdersRepository extends JpaRepository<Orders, Long> {
     Optional<Long> findAuthorUserIdByOrderId(@Param("orderId") Long orderId);
 
     Optional<Orders> findTopByUserEmailOrderByCreateAtDesc(String email);
+
+
+    @Query("SELECT o FROM Orders o WHERE o.status = :status and o.productsOption = :option")
+    List<Orders> findByStatusAndProductsOption(String status, ProductsOption option);
+
+    @Query("SELECT o FROM Orders o WHERE o.orderNumber = :orderNumber")
+    Orders findByOrderNumber(long orderNumber);
+
+
+
+
 
 
 }

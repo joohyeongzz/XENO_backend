@@ -32,6 +32,8 @@ public interface AuthService {
 
     void deleteUser(String email) throws UserNotFoundException;
 
+    void deleteBrand(String email) throws UserNotFoundException;
+
     // refreshToken 토큰 검증 및  accessToken 재발급 받는 메서드
     TokenDTO tokenReissue(String refreshToken);
 }
