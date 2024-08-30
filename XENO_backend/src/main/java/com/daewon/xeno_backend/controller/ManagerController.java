@@ -4,10 +4,7 @@ import com.daewon.xeno_backend.domain.auth.Level;
 import com.daewon.xeno_backend.domain.auth.UserRole;
 import com.daewon.xeno_backend.dto.manager.LevelUpdateDTO;
 import com.daewon.xeno_backend.dto.manager.PointUpdateDTO;
-import com.daewon.xeno_backend.exception.BrandNotFoundException;
-import com.daewon.xeno_backend.exception.InvalidPointException;
-import com.daewon.xeno_backend.exception.UnauthorizedException;
-import com.daewon.xeno_backend.exception.UserNotFoundException;
+import com.daewon.xeno_backend.exception.*;
 import com.daewon.xeno_backend.service.AuthService;
 import com.daewon.xeno_backend.service.ManagerService;
 import com.daewon.xeno_backend.utils.JWTUtil;
@@ -211,6 +208,40 @@ public class ManagerController {
         }  catch (Exception e) {
             log.error("브랜드 삭제중 예기치 못한 오류 발생. 브랜드 ID: {}", targetBrandId, e);
             return ResponseEntity.status(500).body("브랜드 삭제 중 예기치 않은 오류가 발생했습니다: " + e.getMessage());
+        }
+    }
+
+    // product 강제 삭제 메서드
+    @PreAuthorize("hasRole('MANAGER')")
+    @DeleteMapping("/brand/product/{targetProductId}")
+    public ResponseEntity<?> deleteProductByManager(Authentication authentication, @PathVariable Long targetProductId) {
+        String managerEmail = authentication.getName();
+        log.info("제품 강제 삭제 요청 받음. 관리자: {}, 대상 제품 ID: {}", managerEmail, targetProductId);
+
+        try {
+            String deleteProduct = transactionTemplate.execute(status -> {
+                try {
+                    return managerService.deleteProductByManager(managerEmail, targetProductId);
+                } catch (Exception e) {
+                    status.setRollbackOnly();
+                    throw e;
+                }
+            });
+
+            log.info ("제품 삭제 successful. 관리자: {}, 제품 ID: {}", managerEmail, targetProductId);
+            return ResponseEntity.ok(deleteProduct);
+        } catch (ProductNotFoundException e) {
+            log.error("제품 not found. 제품 ID: {}", targetProductId);
+            return ResponseEntity.status(404).body("해당하는 제품을 찾을 수 없습니다: " + e.getMessage());
+        } catch (UnauthorizedException e) {
+            log.warn("권한 없음. 관리자: {}, 제품 ID: {}", managerEmail, targetProductId);
+            return ResponseEntity.status(403).body("권한이 없습니다: " + e.getMessage());
+        } catch (UserNotFoundException e) {
+            log.error("관리자 계정을 찾을 . 없음. 관리자: {}", managerEmail);
+            return ResponseEntity.status(404).body("관리자 계정을 찾을 수 없습니다: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("제품 삭제 중 오류가 발생. 관리자: {}, 제품 ID: {}", managerEmail, targetProductId, e);
+            return ResponseEntity.status(500).body("제품 삭제 중 예기치 않은 오류가 발생했습니다: " + e.getMessage());
         }
     }
 }

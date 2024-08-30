@@ -4,6 +4,7 @@ import com.daewon.xeno_backend.domain.Products;
 import com.daewon.xeno_backend.domain.auth.*;
 import com.daewon.xeno_backend.dto.manager.PointUpdateDTO;
 import com.daewon.xeno_backend.exception.BrandNotFoundException;
+import com.daewon.xeno_backend.exception.ProductNotFoundException;
 import com.daewon.xeno_backend.exception.UnauthorizedException;
 import com.daewon.xeno_backend.exception.UserNotFoundException;
 import com.daewon.xeno_backend.repository.Products.*;
@@ -138,9 +139,22 @@ public class ManagerServiceImpl implements ManagerService {
     }
 
     // product 강제 삭제
+    @Transactional
     @Override
-    public void deleteProductByManager(String managerEmail, Long productIdToDelete) throws UserNotFoundException, UnauthorizedException {
+    public String deleteProductByManager(String managerEmail, Long productIdToDelete) throws UserNotFoundException, UnauthorizedException {
+        // Manager가 맞는지 검증
+        Users manager = validateManager(managerEmail);
 
+        if (!manager.getRoleSet().contains(UserRole.MANAGER)) {
+            throw new UnauthorizedException("제품을 삭제할 권한이 없습니다.");
+        }
+
+        Products product = productsRepository.findById(productIdToDelete)
+                .orElseThrow(() -> new ProductNotFoundException("제품을 찾을 수 없습니다."));
+
+        deleteProductData(product);
+
+        return "제품 ID: " + productIdToDelete + "가 성공적으로 삭제되었습니다.";
     }
 
     // Manager인지 검증하는 메서드
@@ -173,6 +187,12 @@ public class ManagerServiceImpl implements ManagerService {
     private Brand getBrandById(Long brandId) throws BrandNotFoundException {
         return brandRepository.findById(brandId)
                 .orElseThrow(() -> new BrandNotFoundException("Brand의 id를 찾을 수 없음: " + brandId));
+    }
+
+    // product의 id를 가져오는 메서드
+    private Products getProductById(Long productId) throws ProductNotFoundException {
+        return productsRepository.findById(productId)
+                .orElseThrow(() -> new ProductNotFoundException("Product의 id를 찾을 수 없음: " + productId));
     }
 
     // 현재 삭제하려는 product에 관련된 데이터를 지우는 메서드
