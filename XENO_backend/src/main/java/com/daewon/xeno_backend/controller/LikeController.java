@@ -24,7 +24,7 @@
 
 
      @Operation(summary = "좋아요")
-     @PreAuthorize("hasRole('USER')")
+     @PreAuthorize("hasRole('CUSTOMER')")
      @GetMapping()
      public ResponseEntity<String> like(@RequestParam Long productId) {
          try {

@@ -157,21 +157,24 @@ public class ProductServiceImpl implements ProductService {
         String currentUserName = authentication.getName();
         Users users = userRepository.findByEmail(currentUserName).orElse(null);
 
-        // Create UploadImage object with the URLs
-        ProductsImage productsImage = ProductsImage.builder()
-                .productNumber(productNumber)
-                .url_1(numberOfImages > 0 ? urls[0] : null)
-                .url_2(numberOfImages > 1 ? urls[1] : null)
-                .url_3(numberOfImages > 2 ? urls[2] : null)
-                .url_4(numberOfImages > 3 ? urls[3] : null)
-                .url_5(numberOfImages > 4 ? urls[4] : null)
-                .url_6(numberOfImages > 5 ? urls[5] : null)
-                .detail_url(detailUrl)
-                .users(users)
+        ProductsImage productsImage = productsImageRepository.findByProductNumberAndUsers(productNumber, users);
+        if(productsImage == null) {
+            productsImage = ProductsImage.builder()
+                    .productNumber(productNumber)
+                    .url_1(numberOfImages > 0 ? urls[0] : null)
+                    .url_2(numberOfImages > 1 ? urls[1] : null)
+                    .url_3(numberOfImages > 2 ? urls[2] : null)
+                    .url_4(numberOfImages > 3 ? urls[3] : null)
+                    .url_5(numberOfImages > 4 ? urls[4] : null)
+                    .url_6(numberOfImages > 5 ? urls[5] : null)
+                    .detail_url(detailUrl)
+                    .users(users)
+                    .build();
+            productsImageRepository.save(productsImage);
+        } else {
+            throw new IllegalStateException("중복된 품번입니다.");
+        }
 
-                .build();
-
-        productsImageRepository.save(productsImage);
     }
 
     @Transactional
@@ -403,32 +406,43 @@ public class ProductServiceImpl implements ProductService {
 
             List<ProductsSeller> allProducts = productsSellerRepository.findByUsers(users);
 
+            Set<Products> productNumbersFromDB = allProducts.stream()
+                    .map(ProductsSeller::getProducts)
+                    .collect(Collectors.toSet());
+
             // 엑셀에 없는 품번을 데이터베이스에서 삭제
-            for (ProductsSeller product : allProducts) {
-                if (!productNumbersFromExcel.contains(product.getProducts().getProductNumber())) {
-                    ProductsImage image = productsImageRepository.findByProductId(product.getProducts().getProductId());
-                    deleteObjectFromS3(image.getUrl_1());
-                    if (image.getUrl_2() != null) {
-                        deleteObjectFromS3(image.getUrl_2());
+            for (Products product : productNumbersFromDB) {
+                if (!productNumbersFromExcel.contains(product.getProductNumber())) {
+                    ProductsImage image = productsImageRepository.findByProductId(product.getProductId());
+                    if(image != null) {
+                        if (image.getUrl_1() != null) {
+                            deleteObjectFromS3(image.getUrl_1());
+                        }
+                        if (image.getUrl_2() != null) {
+                            deleteObjectFromS3(image.getUrl_2());
+                        }
+                        if (image.getUrl_3() != null) {
+                            deleteObjectFromS3(image.getUrl_3());
+                        }
+                        if (image.getUrl_4() != null) {
+                            deleteObjectFromS3(image.getUrl_4());
+                        }
+                        if (image.getUrl_5() != null) {
+                            deleteObjectFromS3(image.getUrl_5());
+                        }
+                        if (image.getUrl_6() != null) {
+                            deleteObjectFromS3(image.getUrl_6());
+                        }
+                        if (image.getDetail_url() != null) {
+                            deleteObjectFromS3(image.getDetail_url());
+                        }
                     }
-                    if (image.getUrl_3() != null) {
-                        deleteObjectFromS3(image.getUrl_3());
-                    }
-                    if (image.getUrl_4() != null) {
-                        deleteObjectFromS3(image.getUrl_4());
-                    }
-                    if (image.getUrl_5() != null) {
-                        deleteObjectFromS3(image.getUrl_5());
-                    }
-                    if (image.getUrl_6() != null) {
-                        deleteObjectFromS3(image.getUrl_6());
-                    }
-                        deleteObjectFromS3(image.getDetail_url());
-                    productsRepository.delete(product.getProducts());
+                    productsRepository.delete(product);
                 }
             }
 
             for (ProductRegisterDTO dto : productList) {
+                int index = 1;
                 Products existingProduct = productsRepository.findByProductNumber(dto.getProductNumber());
                 if (existingProduct == null) {
                     Products newProduct = Products.builder()
@@ -461,10 +475,12 @@ public class ProductServiceImpl implements ProductService {
 
                     ProductsImage image = productsImageRepository.findByProductNumberAndUsers(dto.getProductNumber(),users);
 
+                    log.info(image);
+                    log.info(dto);
                     // URL 일치 여부 확인
                     if (image != null) {
                         // 비교할 URL을 문자열로 저장
-                        StringBuilder errorMessage = new StringBuilder("URLs do not match. Issues with: ");
+                        StringBuilder errorMessage = new StringBuilder("URLs do not match. Issues with: "+ (index++)+"번째");
 
                         boolean isValid = true;
 
@@ -563,7 +579,7 @@ public class ProductServiceImpl implements ProductService {
                     // URL 일치 여부 확인
                     if (image != null) {
                         // 비교할 URL을 문자열로 저장
-                        StringBuilder errorMessage = new StringBuilder("URLs do not match. Issues with: ");
+                        StringBuilder errorMessage = new StringBuilder("URLs do not match. Issues with: "+ (index++)+"번째");
 
                         boolean isValid = true;
 
@@ -1102,7 +1118,7 @@ public class ProductServiceImpl implements ProductService {
         }
 
         Users users = optionalUser.get();
-        ProductsImage image = productsImageRepository.findByProductNumberAndUsers(productNumber, users);
+        ProductsImage image = productsImageRepository.findByProductNumberAndUsersAndProductsIsNotNull(productNumber, users);
 
         return convertToUploadImageReadDTO(image);
     }

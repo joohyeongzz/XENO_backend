@@ -33,6 +33,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -492,7 +494,7 @@ public class ExcelService {
         String headerNames[] = new String[]{
                 "주문 번호",
                 "결제 시간",
-                "가격",
+                "결제 금액",
                 "수량",
                 "요청 사항",
                 "배송 상태",
@@ -533,7 +535,7 @@ public class ExcelService {
                     row.createCell(7).setCellValue(order.getProductsOption().getProducts().getName());
                     row.createCell(8).setCellValue(order.getProductsOption().getProducts().getColor());
                     row.createCell(9).setCellValue(order.getProductsOption().getSize());
-                    row.createCell(10).setCellValue(order.getUser().getName());
+                    row.createCell(10).setCellValue(order.getCustomer().getName());
                     row.createCell(11).setCellValue("");
                     row.createCell(12).setCellValue("");
                 }
@@ -654,6 +656,87 @@ public class ExcelService {
                     log.error("Unexpected error: " + e.getMessage(), e);
                 }
             }
+        }
+    }
+
+    public byte[] generateOrdersByYearExcelFile(int year) throws IOException {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserName = authentication.getName();
+        Optional<Users> optionalUser = userRepository.findByEmail(currentUserName);
+
+        if (optionalUser.isEmpty()) {
+            throw new RuntimeException("User not found: " + currentUserName);
+        }
+
+        Users users = optionalUser.get();
+
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Sheet1");
+        sheet.setDefaultColumnWidth(10);
+
+        // Header data
+        int rowCount = 0;
+        String headerNames[] = new String[]{
+                "주문 번호",
+                "결제 시간",
+                "결제 금액",
+                "수량",
+                "요청 사항",
+                "배송 상태",
+                "품번",
+                "상품 이름",
+                "색상",
+                "사이즈",
+                "구매자",
+
+        };
+
+        Row headerRow = sheet.createRow(rowCount++);
+        for (int i = 0; i < headerNames.length; i++) {
+            Cell headerCell = headerRow.createCell(i);
+            headerCell.setCellValue(headerNames[i]);
+        }
+
+        int rowIndex = 1;
+
+        List<ProductsSeller> products = productsSellerRepository.findByUsers(users);
+        log.info(products);
+
+                LocalDateTime startDate = LocalDateTime.of(year, Month.JANUARY, 1, 0, 0);
+                LocalDateTime endDate = LocalDateTime.of(year, Month.DECEMBER, 31, 23, 59, 59);
+                List<Orders> ordersList = ordersRepository.findOrdersByYear(startDate,endDate,users);
+                log.info(ordersList);
+                for(Orders order : ordersList) {
+                    Row row = sheet.createRow(rowIndex++);
+                    row.createCell(0).setCellValue(order.getOrderNumber());
+                    row.createCell(1).setCellValue(order.getCreateAt().toString());
+                    row.createCell(2).setCellValue(order.getAmount());
+                    row.createCell(3).setCellValue(order.getQuantity());
+                    row.createCell(4).setCellValue(order.getReq());
+                    row.createCell(5).setCellValue(order.getStatus());
+                    row.createCell(6).setCellValue(order.getProductsOption().getProducts().getProductNumber());
+                    row.createCell(7).setCellValue(order.getProductsOption().getProducts().getName());
+                    row.createCell(8).setCellValue(order.getProductsOption().getProducts().getColor());
+                    row.createCell(9).setCellValue(order.getProductsOption().getSize());
+                    row.createCell(10).setCellValue(order.getCustomer().getName());
+                }
+        Row totalRow = sheet.createRow(rowIndex++);
+
+// 매출 합계 레이블을 C열에 설정
+        Cell totalLabelCell = totalRow.createCell(1);
+        totalLabelCell.setCellValue("매출 합계");
+
+// 매출 합계 수식을 D열에 설정 (C열의 합계를 계산)
+        Cell totalCell = totalRow.createCell(2); // 합계를 표시할 셀을 D열에 설정
+        String formula = String.format("SUM(C2:C%d)", rowIndex - 1); // 데이터 범위에 맞게 조정
+        totalCell.setCellFormula(formula);
+
+        // Write to ByteArrayOutputStream
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            workbook.write(outputStream);
+            workbook.close();
+            return outputStream.toByteArray();
         }
     }
 

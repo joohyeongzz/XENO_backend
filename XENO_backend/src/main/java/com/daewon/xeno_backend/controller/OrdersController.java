@@ -199,10 +199,22 @@ public class OrdersController {
         }
     }
 
+    @Operation(summary = "판매자 운송장 등록 엑셀 다운로드")
+    @GetMapping("/download/order-shipping-excel")
+    public void downloadOrderUpdateShippingExcel(HttpServletResponse response) throws IOException {
+        byte[] excelFile = excelService.generateOrdersExcelFile();
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-Disposition", "attachment;filename=order.xlsx");
+        try (ServletOutputStream outputStream = response.getOutputStream()) {
+            outputStream.write(excelFile);
+            outputStream.flush();
+        }
+    }
+
     @Operation(summary = "판매자 주문 내역 엑셀 다운로드")
     @GetMapping("/download/order-excel")
-    public void downloadOrderExcel(HttpServletResponse response) throws IOException {
-        byte[] excelFile = excelService.generateOrdersExcelFile();
+    public void downloadOrderExcel(@RequestParam("year") int year,HttpServletResponse response) throws IOException {
+        byte[] excelFile = excelService.generateOrdersByYearExcelFile(year);
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         response.setHeader("Content-Disposition", "attachment;filename=order.xlsx");
         try (ServletOutputStream outputStream = response.getOutputStream()) {
