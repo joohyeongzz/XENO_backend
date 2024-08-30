@@ -23,10 +23,7 @@ import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/manager")
@@ -67,20 +64,30 @@ public class ManagerController {
             log.info("managerEmail: " + managerEmail);
 
             String deletedUserEmail = managerService.deleteUserByManager(managerEmail, targetUserId);
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "해당 user의 탈퇴가 완료되었습니다.");
+            response.put("deletedUserEmail", deletedUserEmail);
+
             log.info("delete중인 manager의 email은? : " + deletedUserEmail);
-            return ResponseEntity.ok("해당 user의 탈퇴가 완료되었습니다.");
+
+            return ResponseEntity.ok(response);
         } catch (JwtException e) {
-            log.error("JWT 토큰 처리 중 오류 발생", e);
-            return ResponseEntity.status(401).body("token이 유효하지 않거나 만료됨");
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "token이 유효하지 않거나 만료됨");
+            return ResponseEntity.status(401).body(errorResponse);
         } catch (UserNotFoundException e) {
-            log.warn("사용자를 찾을 수 없음: {}", e.getMessage());
-            return ResponseEntity.status(404).body(e.getMessage());
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(404).body(errorResponse);
         } catch (UnauthorizedException e) {
-            log.warn("권한 없는 작업 시도: {}", e.getMessage());
-            return ResponseEntity.status(403).body(e.getMessage());
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(403).body(errorResponse);
         } catch (Exception e) {
-            log.error("사용자 삭제 중 오류 발생", e);
-            return ResponseEntity.status(500).body("사용자를 삭제하는 도중 오류가 발생 : " + e.getMessage());
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "사용자를 삭제하는 도중 오류가 발생 : " + e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
         }
     }
 

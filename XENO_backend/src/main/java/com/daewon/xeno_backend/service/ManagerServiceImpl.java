@@ -166,14 +166,16 @@ public class ManagerServiceImpl implements ManagerService {
     public List<UserListDTO> getAllUsers() {
         List<Users> users = userRepository.findAll();
 
-        return users.stream().map(user -> {
-            UserListDTO userListDTO = new UserListDTO();
-            userListDTO.setUserId(user.getUserId());
-            userListDTO.setEmail(user.getEmail());
-            userListDTO.setName(user.getName());
-            userListDTO.setPhoneNumber(user.getPhoneNumber());
-            userListDTO.setAddress(user.getAddress());
-            userListDTO.setRoles(user.getRoleSet());
+        return users.stream()
+                .filter(user -> user.getRoleSet().contains(UserRole.USER))  // USER 역할을 가진 사용자만 필터링
+                .map(user -> {
+                    UserListDTO userListDTO = new UserListDTO();
+                    userListDTO.setUserId(user.getUserId());
+                    userListDTO.setEmail(user.getEmail());
+                    userListDTO.setName(user.getName());
+                    userListDTO.setPhoneNumber(user.getPhoneNumber());
+                    userListDTO.setAddress(user.getAddress());
+                    userListDTO.setRoles(user.getRoleSet());
 
             if (user.getCustomer() != null) {
                 userListDTO.setCustomerId(user.getCustomer().getCustomerId());
