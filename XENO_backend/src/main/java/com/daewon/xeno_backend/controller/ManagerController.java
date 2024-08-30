@@ -39,6 +39,7 @@ public class ManagerController {
     private final JWTUtil jwtUtil;
     private final TransactionTemplate transactionTemplate;
 
+    // user 강제 탈퇴 메서드
     @PreAuthorize("hasRole('MANAGER')")
     @DeleteMapping("/{targetUserId}")
     public ResponseEntity<?> deleteUser(Authentication authentication, @RequestHeader("Authorization") String token,
@@ -181,13 +182,14 @@ public class ManagerController {
         }
     }
 
+    // brand 강제 탈퇴 메서드
     @PreAuthorize("hasRole('MANAGER')")
     @DeleteMapping("/brand/{targetBrandId}")
     public ResponseEntity<?> deleteBrand(Authentication authentication,
                                          @PathVariable Long targetBrandId) {
 
         try {
-            String result = transactionTemplate.execute(new TransactionCallback<String>() {
+            String deleteBrand = transactionTemplate.execute(new TransactionCallback<String>() {
                 @Override
                 public String doInTransaction(TransactionStatus status) {
                     try {
@@ -200,10 +202,15 @@ public class ManagerController {
             });
 
             log.info("브랜드 삭제 성공. 관리자 이메일: {}, 브랜드 ID: {}", authentication.getName(), targetBrandId);
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            log.error("브랜드 삭제 중 예기치 않은 오류 발생. 관리자 이메일: {}, 브랜드 ID: {}", authentication.getName(), targetBrandId, e);
-            return ResponseEntity.status(500).body("브랜드 삭제 중 오류가 발생했습니다: " + e.getMessage());
+            return ResponseEntity.ok(deleteBrand);
+        } catch (BrandNotFoundException e) {
+            log.error("브랜드 not found. 브랜드 ID: {}", targetBrandId);
+            return ResponseEntity.status(404).body("해당하는 브랜드를 찾을 수 없습니다: " + e.getMessage());
+        } catch (UnauthorizedException e) {
+            return ResponseEntity.status(403).body("권한이 없습니다: " + e.getMessage());
+        }  catch (Exception e) {
+            log.error("브랜드 삭제중 예기치 못한 오류 발생. 브랜드 ID: {}", targetBrandId, e);
+            return ResponseEntity.status(500).body("브랜드 삭제 중 예기치 않은 오류가 발생했습니다: " + e.getMessage());
         }
     }
 }

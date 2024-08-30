@@ -134,7 +134,7 @@ public class ManagerServiceImpl implements ManagerService {
 
         log.info("현재 {} 가 {} 의 brand와 해당하는 brand의 user {} 계정을 삭제합니다.", manager, brandIdToDelete, userToDelete);
 
-        return "Brand와 관련된 모든 사용자 계정이 성공적으로 삭제되었습니다.";
+        return "Brand 및 관련된 모든 사용자 계정이 성공적으로 삭제되었습니다.";
     }
 
     // product 강제 삭제
