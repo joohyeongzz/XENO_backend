@@ -1,8 +1,6 @@
 package com.daewon.xeno_backend.service;
 
 import com.daewon.xeno_backend.domain.*;
-import com.daewon.xeno_backend.domain.auth.Customer;
-import com.daewon.xeno_backend.domain.auth.Level;
 import com.daewon.xeno_backend.domain.auth.Users;
 import com.daewon.xeno_backend.dto.auth.GetOneDTO;
 import com.daewon.xeno_backend.dto.order.*;
@@ -11,7 +9,6 @@ import com.daewon.xeno_backend.dto.page.PageRequestDTO;
 import com.daewon.xeno_backend.dto.product.ProductHeaderDTO;
 import com.daewon.xeno_backend.exception.UserNotFoundException;
 import com.daewon.xeno_backend.repository.*;
-import com.daewon.xeno_backend.repository.auth.CustomerRepository;
 import com.daewon.xeno_backend.repository.Products.ProductsImageRepository;
 import com.daewon.xeno_backend.repository.Products.ProductsOptionRepository;
 import com.daewon.xeno_backend.repository.Products.ProductsSellerRepository;
@@ -49,20 +46,22 @@ public class OrdersServiceImpl implements OrdersService {
     private final ProductsImageRepository productsImageRepository;
     private final ProductsSellerRepository productsSellerRepository;
     private final ReviewRepository reviewRepository;
-    private final CustomerRepository customerRepository;
+
+
+
 
     @Override
     public List<OrdersListDTO> getAllOrders(Long userId) {
         Users user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
         log.info("user: " + userId);
-        List<Orders> orders = ordersRepository.findByUser(user);
+        List<Orders> orders = ordersRepository.findByCustomer(user);
         return orders.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
 
     @Override
     public String getLatestReqForUser(String email) {
-        return ordersRepository.findTopByUserEmailOrderByCreateAtDesc(email)
+        return ordersRepository.findTopByCustomerEmailOrderByCreateAtDesc(email)
                 .map(Orders::getReq)
                 .orElse(null);
     }
@@ -70,6 +69,8 @@ public class OrdersServiceImpl implements OrdersService {
     @Transactional
     @Override
     public List<OrdersDTO> createOrders(List<OrdersDTO> ordersDTO, String email) {
+
+
         Users users = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없음"));
 
@@ -80,29 +81,19 @@ public class OrdersServiceImpl implements OrdersService {
         List<Orders> savedOrders = new ArrayList<>();
 
         for(OrdersDTO dto : ordersDTO) {
+            ProductsSeller seller = productsSellerRepository.findByProducts(findProductOption(dto.getProductOptionId()).getProducts());
             Orders orders  = Orders.builder()
                 .orderPayId(orderPayId)
                 .orderNumber(orderNumber)
                 .productsOption(findProductOption(dto.getProductOptionId()))
-                .user(users)
+                .customer(users)
+                .seller(seller.getUsers())
                 .status("결제 완료")
                 .req(dto.getReq())
                 .quantity(dto.getQuantity())
                 .amount(dto.getAmount())
                 .build();
             savedOrders.add(ordersRepository.save(orders));
-
-            // 적립금 계산 및 저장 로직
-            int point = (int) (dto.getAmount() * 0.01); // 1% 적립
-            Customer customer = customerRepository.findByUserId(users.getUserId())
-                    .orElseGet(() -> Customer.builder()
-                            .userId(users.getUserId())
-                            .point(0)
-                            .level(Level.BRONZE)
-                            .build());
-            customer.setPoint(customer.getPoint() + point);
-            customerRepository.save(customer);
-
         }
 
         // 저장된 주문들을 DTO로 변환하여 반환
@@ -136,7 +127,7 @@ public class OrdersServiceImpl implements OrdersService {
         log.info("email: " + email);
 
         // 주문한 사용자와 현재 인증된 사용자가 일치하는지 확인
-        if (!orders.getUser().getEmail().equals(email)) {
+        if (!orders.getCustomer().getEmail().equals(email)) {
             throw new UserNotFoundException("User not found");
         }
 
@@ -144,8 +135,8 @@ public class OrdersServiceImpl implements OrdersService {
                 orders.getOrderId(),
                 orders.getOrderPayId(),
                 String.valueOf(orders.getOrderNumber()),
-                orders.getUser().getName(),
-                orders.getUser().getAddress(),
+                orders.getCustomer().getName(),
+                orders.getCustomer().getAddress(),
                 orders.getAmount(),
                 orders.getQuantity()
         );
@@ -166,16 +157,14 @@ public class OrdersServiceImpl implements OrdersService {
 
         // GetOneDTO 리스트 생성 및 설정
         List<GetOneDTO> getOneList = new ArrayList<>();
-        Customer customer = customerRepository.findByUserId(orders.getUser().getUserId())
-                    .orElseThrow(() -> new UserNotFoundException("User not found"));
-        getOneList.add(createGetOneDTO(orders.getUser(), customer));
+        getOneList.add(createGetOneDTO(orders.getCustomer()));
         ordersListDTO.setGetOne(getOneList);
 
         return ordersListDTO;
     }
 
-    private GetOneDTO createGetOneDTO(Users users, Customer customer) {
-        return new GetOneDTO(users.getPhoneNumber(), users.getAddress(), customer.getPoint());
+    private GetOneDTO createGetOneDTO(Users users) {
+        return new GetOneDTO(users.getPhoneNumber(), users.getAddress(),users.getCustomer().getPoint());
     }
 
     // 주문번호 orderNumber 랜덤생성
@@ -230,7 +219,7 @@ public class OrdersServiceImpl implements OrdersService {
 
         Users users = userRepository.findByEmail(email).orElseThrow(() -> new EntityNotFoundException("User not found"));
 
-        Page<Orders> orders = ordersRepository.findPagingOrdersByUser(pageable,users);
+        Page<Orders> orders = ordersRepository.findPagingOrdersByCustomer(pageable,users);
 
         List<OrdersCardListDTO> dtoList = new ArrayList<>();
 
@@ -322,7 +311,7 @@ public class OrdersServiceImpl implements OrdersService {
                 dto.setOrderDate(order.getCreateAt().format(formatter));
                 dto.setReq(order.getReq());
                 dto.setAmount(order.getAmount());
-                dto.setCustomerName(order.getUser().getName());
+                dto.setCustomerName(order.getCustomer().getName());
                 list.add(dto);
             }
         }
@@ -341,7 +330,7 @@ public class OrdersServiceImpl implements OrdersService {
 
         log.info(orders);
 
+
+
     }
-
-
 }
