@@ -1,10 +1,15 @@
 package com.daewon.xeno_backend.service;
 
+import com.daewon.xeno_backend.domain.Products;
+import com.daewon.xeno_backend.domain.Review;
 import com.daewon.xeno_backend.domain.auth.*;
 import com.daewon.xeno_backend.dto.auth.*;
 import com.daewon.xeno_backend.dto.user.UserUpdateDTO;
 import com.daewon.xeno_backend.exception.UserNotFoundException;
+import com.daewon.xeno_backend.repository.Products.*;
 import com.daewon.xeno_backend.repository.RefreshTokenRepository;
+import com.daewon.xeno_backend.repository.ReplyRepository;
+import com.daewon.xeno_backend.repository.ReviewRepository;
 import com.daewon.xeno_backend.repository.auth.BrandRepository;
 import com.daewon.xeno_backend.repository.auth.CustomerRepository;
 import com.daewon.xeno_backend.repository.auth.ManagerRepository;
@@ -12,11 +17,13 @@ import com.daewon.xeno_backend.repository.auth.UserRepository;
 import com.daewon.xeno_backend.utils.JWTUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.math3.stat.descriptive.summary.Product;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -32,6 +39,14 @@ public class AuthServiceImpl implements AuthService {
     private final CustomerRepository customerRepository;
     private final ManagerRepository managerRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final ProductsRepository productsRepository;
+    private final ProductsOptionRepository productsOptionRepository;
+    private final ProductsImageRepository productsImageRepository;
+    private final ProductsStarRepository productsStarRepository;
+    private final ProductsLikeRepository productsLikeRepository;
+    private final ProductsSellerRepository productsSellerRepository;
+    private final ReviewRepository reviewRepository;
+    private final ReplyRepository replyRepository;
 
     @Override
     @Transactional
@@ -181,6 +196,7 @@ public class AuthServiceImpl implements AuthService {
         return userRepository.save(user);
     }
 
+    // user탈퇴 메서드
     @Transactional
     @Override
     public void deleteUser(String email) throws UserNotFoundException {
@@ -196,46 +212,36 @@ public class AuthServiceImpl implements AuthService {
         userRepository.delete(user);
     }
 
-//    @Transactional
-//    public void deleteUser(String userEmail) throws UserNotFoundException {
-//        log.info("Attempting to delete user with email: {}", userEmail);
-//
-//        Users user = userRepository.findByEmail(userEmail)
-//                .orElseThrow(() -> new UserNotFoundException("User not found with email: " + userEmail));
-//
-//        log.info("User found. User ID: {}", user.getUserId());
-//
-//        // Customer 엔티티 삭제
-//        try {
-//            if (user.getCustomer() != null) {
-//                log.info("Deleting customer for user: {}", userEmail);
-//                customerRepository.delete(user.getCustomer());
-//            }
-//        } catch (Exception e) {
-//            log.error("Error deleting customer for user: {}", userEmail, e);
-//            throw new RuntimeException("Failed to delete customer", e);
-//        }
-//
-//        // RefreshToken 삭제
-//        try {
-//            log.info("Deleting refresh tokens for user: {}", userEmail);
-//            refreshTokenRepository.deleteByEmail(userEmail);
-//        } catch (Exception e) {
-//            log.error("Error deleting refresh tokens for user: {}", userEmail, e);
-//            throw new RuntimeException("Failed to delete refresh tokens", e);
-//        }
-//
-//        // Users 엔티티 삭제
-//        try {
-//            log.info("Deleting user: {}", userEmail);
-//            userRepository.delete(user);
-//        } catch (Exception e) {
-//            log.error("Error deleting user: {}", userEmail, e);
-//            throw new RuntimeException("Failed to delete user", e);
-//        }
-//
-//        log.info("User successfully deleted: {}", userEmail);
-//    }
+    // brand 탈퇴 메서드
+    @Transactional
+    @Override
+    public void deleteBrand(String email) throws UserNotFoundException {
+        Users user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException("User의 email을 찾을 수 없습니다 : " + email));
+
+        Brand brand = user.getBrand();
+        if (brand == null) {
+            throw new IllegalStateException("해당 사용자는 Brand 계정이 아닙니다.");
+        }
+
+        String brandName = brand.getBrandName();
+
+        // product에 엮여있는 엔티티 값들 삭제 ... review, reply등
+        List<Products> products = productsRepository.findByBrandName(brandName);
+        for (Products product: products) {
+            deleteProductData(product);
+        }
+
+        // Brand 엔티티 삭제
+        brandRepository.delete(brand);
+        log.info("브랜드 {} 가 삭제되었습니다.", brand.getBrandName());
+
+        // User 엔티티 삭제
+        userRepository.delete(user);
+        log.info("사용자 계정 (email: {})이 삭제되었습니다.", email);
+
+        log.info("브랜드 계정 및 관련 데이터가 성공적으로 삭제되었습니다. Email: {}", email);
+    }
 
     @Override
     public SellerInfoCardDTO readSellerInfo(UserDetails userDetails) {
@@ -275,5 +281,21 @@ public class AuthServiceImpl implements AuthService {
         }
 
         return dto;
+    }
+
+    @Transactional
+    protected void deleteProductData(Products product) {
+        log.info("누구임? " + product.getProductId());
+        int deletedOptions = productsOptionRepository.deleteAllByProductId(product.getProductId());
+        log.info("제품 ID: {}에 대한 {} 개의 옵션이 삭제되었습니다.", product.getProductId(), deletedOptions);
+        productsImageRepository.deleteByProducts(product);
+        productsStarRepository.deleteByProducts(product);
+        productsLikeRepository.deleteByProducts(product);
+        productsSellerRepository.deleteByProducts(product);
+
+        productsRepository.delete(product);
+
+        log.info("제품 ID: {} 및 관련 데이터가 삭제되었습니다.", product.getProductId());
+
     }
 }

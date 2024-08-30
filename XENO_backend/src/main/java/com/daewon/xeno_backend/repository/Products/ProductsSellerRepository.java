@@ -11,6 +11,9 @@ public interface ProductsSellerRepository extends JpaRepository<ProductsSeller, 
 
     List<ProductsSeller> findByUsers(Users users);
 
+    // 특정 제품과 관련된 모든 판매자 정보를 삭제하는 메서드
+    void deleteByProducts(Products products);
+
     ProductsSeller findByProducts(Products products);
 
 }
