@@ -120,13 +120,13 @@ public class ManagerController {
         }
     }
 
-    // 해당 targetUserId의 point를 조정하는 메서드
     @PreAuthorize("hasRole('MANAGER')")
     @PutMapping("/point/{targetUserId}")
-    public ResponseEntity<String> updateUserPoint(Authentication authentication,
-                                                  @RequestHeader("Authorization") String token,
-                                                  @RequestBody PointUpdateDTO pointUpdateDto,
-                                                  @PathVariable Long targetUserId) {
+    public ResponseEntity<Map<String, Object>> updateUserPoint(Authentication authentication,
+                                                               @RequestHeader("Authorization") String token,
+                                                               @RequestBody PointUpdateDTO pointUpdateDto,
+                                                               @PathVariable Long targetUserId) {
+        Map<String, Object> response = new HashMap<>();
         try {
             String currentToken = token.replace("Bearer ", "");
             Map<String, Object> claims = jwtUtil.validateToken(currentToken);
@@ -143,74 +143,86 @@ public class ManagerController {
             }
 
             managerService.updateUserPointByManager(managerEmail, targetUserId, newPoints);
-            return ResponseEntity.ok(String.format("Manager에 의해 user(ID: %d)의 포인트가 %d로 설정되었습니다.", targetUserId, newPoints));
+
+            response.put("userId", targetUserId);
+            response.put("newPoints", newPoints);
+            response.put("message", "포인트가 성공적으로 업데이트되었습니다.");
+            return ResponseEntity.ok(response);
         } catch (JwtException e) {
             log.error("JWT 토큰 처리 중 오류 발생", e);
-            return ResponseEntity.status(401).body("토큰이 만료됐거나 유효하지 않음");
+            response.put("message", "토큰이 만료됐거나 유효하지 않음");
+            return ResponseEntity.status(401).body(response);
         } catch (UserNotFoundException e) {
             log.warn("사용자를 찾을 수 없음: {}", e.getMessage());
-            return ResponseEntity.status(404).body(e.getMessage());
+            response.put("message", e.getMessage());
+            return ResponseEntity.status(404).body(response);
         } catch (UnauthorizedException e) {
             log.warn("권한 없는 작업 시도: {}", e.getMessage());
-            return ResponseEntity.status(403).body(e.getMessage());
+            response.put("message", e.getMessage());
+            return ResponseEntity.status(403).body(response);
         } catch (Exception e) {
             log.error("사용자 포인트 업데이트 중 오류 발생", e);
-            return ResponseEntity.status(500)
-                    .body("user point 조정 실패 : " + e.getMessage());
+            response.put("message", "user point 조정 실패 : " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
         }
     }
 
-    // 해당 targetUserId의 level를 변경하는 메서드
     @PreAuthorize("hasRole('MANAGER')")
     @PutMapping("/level/{targetUserId}")
-    public ResponseEntity<String> updateUserLevel(Authentication authentication,
-                                                  @RequestHeader("Authorization") String token,
-                                                  @RequestBody LevelUpdateDTO levelUpdateDTO,
-                                                  @PathVariable Long targetUserId) {
+    public ResponseEntity<Map<String, String>> updateUserLevel(
+            Authentication authentication,
+            @RequestHeader("Authorization") String token,
+            @RequestBody LevelUpdateDTO levelUpdateDTO,
+            @PathVariable Long targetUserId) {
+
+        Map<String, String> response = new HashMap<>();
+
         try {
             String currentToken = token.replace("Bearer ", "");
             Map<String, Object> claims = jwtUtil.validateToken(currentToken);
             String managerEmail = claims.get("email").toString();
 
-            // 새로운 level 값을 String 형태로
             String newLevelString = levelUpdateDTO.getNewLevel();
-            // 새로운 level enum 값
             Level newLevel;
 
             try {
-                // enum에 들어있는 값이 대문자로 이루어졌기 때문에 toUpperCase() 사용
                 newLevel = Level.valueOf(newLevelString.toUpperCase());
             } catch (IllegalArgumentException e) {
                 log.warn("잘못된 Level 값이 입력됨 : {}", newLevelString);
-                return ResponseEntity.status(404).body("잘못된 level 값입니다. 허용된 값: " + Arrays.toString(Level.values()));
+                response.put("message", "잘못된 level 값입니다. 허용된 값: " + Arrays.toString(Level.values()));
+                return ResponseEntity.status(400).body(response);
             }
 
             managerService.updateUserLevelByManager(managerEmail, targetUserId, newLevel);
-            return ResponseEntity.ok("Manager에 의해 user의 level이 정상적으로 변경되었습니다.");
+            response.put("message", "Manager에 의해 user의 level이 정상적으로 변경되었습니다.");
+            return ResponseEntity.ok(response);
         } catch (JwtException e) {
             log.error("JWT 토큰 처리 중 오류 발생", e);
-            return ResponseEntity.status(401).body("토큰이 만료됐거나 유효하지 않음");
+            response.put("message", "토큰이 만료됐거나 유효하지 않음");
+            return ResponseEntity.status(401).body(response);
         } catch (UserNotFoundException e) {
             log.warn("사용자를 찾을 수 없음: {}", e.getMessage());
-            return ResponseEntity.status(404).body(e.getMessage());
+            response.put("message", e.getMessage());
+            return ResponseEntity.status(404).body(response);
         } catch (UnauthorizedException e) {
             log.warn("권한 없는 작업 시도: {}", e.getMessage());
-            return ResponseEntity.status(403).body(e.getMessage());
+            response.put("message", e.getMessage());
+            return ResponseEntity.status(403).body(response);
         } catch (Exception e) {
-            log.error("사용자 포인트 업데이트 중 오류 발생", e);
-            return ResponseEntity.status(500)
-                    .body("user level 변경 실패 : " + e.getMessage());
+            log.error("사용자 level 업데이트 중 오류 발생", e);
+            response.put("message", "user level 변경 실패 : " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
         }
     }
 
-    // brand 강제 탈퇴 메서드
     @PreAuthorize("hasRole('MANAGER')")
     @DeleteMapping("/brand/{targetBrandId}")
-    public ResponseEntity<?> deleteBrand(Authentication authentication,
-                                         @PathVariable Long targetBrandId) {
+    public ResponseEntity<Map<String, Object>> deleteBrand(Authentication authentication,
+                                                           @PathVariable Long targetBrandId) {
+        Map<String, Object> response = new HashMap<>();
 
         try {
-            String deleteBrand = transactionTemplate.execute(new TransactionCallback<String>() {
+            String deleteBrandResult = transactionTemplate.execute(new TransactionCallback<String>() {
                 @Override
                 public String doInTransaction(TransactionStatus status) {
                     try {
@@ -223,15 +235,24 @@ public class ManagerController {
             });
 
             log.info("브랜드 삭제 성공. 관리자 이메일: {}, 브랜드 ID: {}", authentication.getName(), targetBrandId);
-            return ResponseEntity.ok(deleteBrand);
+            response.put("status", "success");
+            response.put("message", "브랜드가 성공적으로 삭제되었습니다.");
+            response.put("data", deleteBrandResult);
+            return ResponseEntity.ok(response);
         } catch (BrandNotFoundException e) {
             log.error("브랜드 not found. 브랜드 ID: {}", targetBrandId);
-            return ResponseEntity.status(404).body("해당하는 브랜드를 찾을 수 없습니다: " + e.getMessage());
+            response.put("status", "error");
+            response.put("message", "해당하는 브랜드를 찾을 수 없습니다: " + e.getMessage());
+            return ResponseEntity.status(404).body(response);
         } catch (UnauthorizedException e) {
-            return ResponseEntity.status(403).body("권한이 없습니다: " + e.getMessage());
-        }  catch (Exception e) {
+            response.put("status", "error");
+            response.put("message", "권한이 없습니다: " + e.getMessage());
+            return ResponseEntity.status(403).body(response);
+        } catch (Exception e) {
             log.error("브랜드 삭제중 예기치 못한 오류 발생. 브랜드 ID: {}", targetBrandId, e);
-            return ResponseEntity.status(500).body("브랜드 삭제 중 예기치 않은 오류가 발생했습니다: " + e.getMessage());
+            response.put("status", "error");
+            response.put("message", "브랜드 삭제 중 예기치 않은 오류가 발생했습니다: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
         }
     }
 
