@@ -17,7 +17,7 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@v3
         with:
-          java-version: '17' # 사용하는 Java 버전aaa
+          java-version: '17' # 사용하는 Java 버전aaaasd
           distribution: 'temurin'
 
       - name: Grant execute permission for Gradle Wrapper
