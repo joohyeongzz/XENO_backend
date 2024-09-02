@@ -113,7 +113,12 @@ public class ExcelService {
                 for (int i = 0; i < sizes.length; i++) {
                     ProductSizeDTO sizeDTO = new ProductSizeDTO();
                     sizeDTO.setSize(sizes[i].trim());
-                    sizeDTO.setStock(Integer.parseInt(stocks[i].trim()));
+
+                    // 소수점이 포함된 문자열을 Double로 변환한 후 정수로 변환
+                    double stockDouble = Double.parseDouble(stocks[i].trim());
+                    int stockInt = (int) Math.round(stockDouble);
+                    sizeDTO.setStock(stockInt);
+
                     sizeDTOs.add(sizeDTO);
                 }
                 product.setSize(sizeDTOs);
