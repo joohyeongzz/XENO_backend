@@ -75,18 +75,22 @@ public class ManagerController {
         } catch (JwtException e) {
             Map<String, String> errorResponse = new HashMap<>();
             errorResponse.put("error", "token이 유효하지 않거나 만료됨");
+
             return ResponseEntity.status(401).body(errorResponse);
         } catch (UserNotFoundException e) {
             Map<String, String> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());
+
             return ResponseEntity.status(404).body(errorResponse);
         } catch (UnauthorizedException e) {
             Map<String, String> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());
+
             return ResponseEntity.status(403).body(errorResponse);
         } catch (Exception e) {
             Map<String, String> errorResponse = new HashMap<>();
             errorResponse.put("error", "사용자를 삭제하는 도중 오류가 발생 : " + e.getMessage());
+
             return ResponseEntity.status(500).body(errorResponse);
         }
     }
@@ -238,20 +242,24 @@ public class ManagerController {
             response.put("status", "success");
             response.put("message", "브랜드가 성공적으로 삭제되었습니다.");
             response.put("data", deleteBrandResult);
+
             return ResponseEntity.ok(response);
         } catch (BrandNotFoundException e) {
             log.error("브랜드 not found. 브랜드 ID: {}", targetBrandId);
             response.put("status", "error");
             response.put("message", "해당하는 브랜드를 찾을 수 없습니다: " + e.getMessage());
+
             return ResponseEntity.status(404).body(response);
         } catch (UnauthorizedException e) {
             response.put("status", "error");
             response.put("message", "권한이 없습니다: " + e.getMessage());
+
             return ResponseEntity.status(403).body(response);
         } catch (Exception e) {
             log.error("브랜드 삭제중 예기치 못한 오류 발생. 브랜드 ID: {}", targetBrandId, e);
             response.put("status", "error");
             response.put("message", "브랜드 삭제 중 예기치 않은 오류가 발생했습니다: " + e.getMessage());
+
             return ResponseEntity.status(500).body(response);
         }
     }
@@ -274,19 +282,40 @@ public class ManagerController {
             });
 
             log.info ("제품 삭제 successful. 관리자: {}, 제품 ID: {}", managerEmail, targetProductId);
-            return ResponseEntity.ok(deleteProduct);
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "관리자 회원가입 완료");
+            response.put("deleteProduct", deleteProduct);
+
+            return ResponseEntity.ok(response);
         } catch (ProductNotFoundException e) {
             log.error("제품 not found. 제품 ID: {}", targetProductId);
-            return ResponseEntity.status(404).body("해당하는 제품을 찾을 수 없습니다: " + e.getMessage());
+
+            Map<String, String> errorReponse = new HashMap<>();
+            errorReponse.put("error", "해당하는 제품을 찾을 수 없습니다.");
+
+            return ResponseEntity.status(404).body(errorReponse + e.getMessage());
         } catch (UnauthorizedException e) {
             log.warn("권한 없음. 관리자: {}, 제품 ID: {}", managerEmail, targetProductId);
-            return ResponseEntity.status(403).body("권한이 없습니다: " + e.getMessage());
+
+            Map<String, String> errorReponse = new HashMap<>();
+            errorReponse.put("error", "권한이 없습니다.");
+
+            return ResponseEntity.status(403).body(errorReponse + e.getMessage());
         } catch (UserNotFoundException e) {
-            log.error("관리자 계정을 찾을 . 없음. 관리자: {}", managerEmail);
-            return ResponseEntity.status(404).body("관리자 계정을 찾을 수 없습니다: " + e.getMessage());
+            log.error("관리자 계정을 찾을 수 없음. 관리자: {}", managerEmail);
+
+            Map<String, String> errorReponse = new HashMap<>();
+            errorReponse.put("error", "관리자 계정을 찾을 수 없습니다.");
+
+            return ResponseEntity.status(404).body(errorReponse + e.getMessage());
         } catch (Exception e) {
             log.error("제품 삭제 중 오류가 발생. 관리자: {}, 제품 ID: {}", managerEmail, targetProductId, e);
-            return ResponseEntity.status(500).body("제품 삭제 중 예기치 않은 오류가 발생했습니다: " + e.getMessage());
+
+            Map<String, String> errorReponse = new HashMap<>();
+            errorReponse.put("error", "제품 삭제 중 예기치 않은 오류가 발생했습니다.");
+
+            return ResponseEntity.status(500).body(errorReponse + e.getMessage());
         }
     }
 }
