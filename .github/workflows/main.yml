@@ -21,14 +21,14 @@ jobs:
           distribution: 'temurin'
 
       - name: Grant execute permission for Gradle Wrapper
-        run: chmod +x ./gradlew
+        run: chmod +x ./XENO_backend/gradlew
 
       - name: Build with Gradle
-        run: ./gradlew build -x test
+        run: ./XENO_backend/gradlew build -x test
 
       - name: Build Docker image
         run: |
-          docker build -t xenoback:latest .
+          docker build -t xenoback:latest ./XENO_backend/.
           docker tag xenoback:latest joohyeongzz/xenoback:latest
 
       - name: Push Docker image to Docker Hub
