@@ -67,8 +67,10 @@ public class DeliveryStatusSchedulerService {
         // 요청 바디 작성
         Map<String, Object> variables = new HashMap<>();
         variables.put("carrierId", deliveryTrack.getCarrierId());
-        variables.put("trackingNumber", deliveryTrack.getTrackingNumber()); // 문자열로 변환된 trackingNumber
-
+            // trackingNumber를 문자열에서 숫자로 변환
+            String trackingNumberStr = deliveryTrack.getTrackingNumber();
+          
+                variables.put("trackingNumber", trackingNumberStr);
         Map<String, Object> body = new HashMap<>();
         body.put("query", query);
         body.put("variables", variables);
@@ -102,6 +104,7 @@ public class DeliveryStatusSchedulerService {
                     deliveryTrack.setLastEventTime(timeNode.asText());
                     deliveryTrackRepository.save(deliveryTrack);
                     String statusCode = statusNode.path("code").asText();
+                    String statusName = statusNode.path("name").asText();
                     log.info("응답 성공"+statusCode);
                     switch (statusCode) {
                         case "UNKNOWN":

@@ -1078,14 +1078,10 @@ public class ProductServiceImpl implements ProductService {
                         ? reviewRepository.countByProductId(productId)
                         : 0);
 
-        ProductsImage productImages = productsImageRepository.findByProductId(products.getProductId());
-        productInfoDTO.setUrl_1(productImages.getUrl_1());
-        productInfoDTO.setUrl_2(productImages.getUrl_2());
-        productInfoDTO.setUrl_3(productImages.getUrl_3());
-        productInfoDTO.setUrl_4(productImages.getUrl_4());
-        productInfoDTO.setUrl_5(productImages.getUrl_5());
-        productInfoDTO.setUrl_6(productImages.getUrl_6());
-        productInfoDTO.setDetail_url(productImages.getDetail_url());
+        ProductsImage image = productsImageRepository.findByProductId(products.getProductId());
+        String[] productImages = {image.getUrl_1(),image.getUrl_2(),image.getUrl_3(),image.getUrl_4(),image.getUrl_5(),image.getUrl_6()};
+        productInfoDTO.setProductImages(productImages);
+        productInfoDTO.setProductDetailImage(image.getDetail_url());
 
         return productInfoDTO;
     }
