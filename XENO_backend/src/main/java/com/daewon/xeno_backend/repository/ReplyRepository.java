@@ -1,6 +1,7 @@
 package com.daewon.xeno_backend.repository;
 
 import com.daewon.xeno_backend.domain.Reply;
+import com.daewon.xeno_backend.domain.Review;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -23,5 +24,8 @@ public interface ReplyRepository extends JpaRepository<Reply, Long> {
 
     @Query("SELECT COUNT(r) FROM Reply r WHERE r.review.reviewId = :reviewId")
     int countByReviewId(@Param("reviewId") Long reviewId);
+
+    // 특정 리뷰에 대한 모든 답글을 삭제하는 메서드
+    void deleteByReview(Review review);
 
 }

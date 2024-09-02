@@ -3,7 +3,6 @@ package com.daewon.xeno_backend.excel;
 import com.daewon.xeno_backend.domain.Products;
 import com.daewon.xeno_backend.domain.ProductsColor;
 import com.daewon.xeno_backend.domain.ProductsColorSize;
-import com.daewon.xeno_backend.domain.Size;
 import com.daewon.xeno_backend.repository.ProductsColorRepository;
 import com.daewon.xeno_backend.repository.ProductsColorSizeRepository;
 import com.daewon.xeno_backend.repository.ProductsRepository;

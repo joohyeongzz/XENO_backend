@@ -112,6 +112,7 @@ public class ProductController {
         }
     }
 
+
     @Operation(summary = "top10")
     @GetMapping("/rank/{category}")
     public ResponseEntity<List<ProductsStarRankListDTO>> getranktop10(
@@ -156,6 +157,23 @@ public class ProductController {
         }
     }
 
+    @PutMapping(value = "/update/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> updateProductImages(
+            @RequestPart("productNumber") String productNumber,
+            @RequestPart(name = "productImages")  List<MultipartFile> productImages,
+            @RequestPart(name = "productDetailImage") MultipartFile productDetailImage) {
+        try {
+
+            productService.updateProductImages(productNumber, productImages != null && !productImages.isEmpty() ? productImages : null,
+                    productDetailImage != null && !productDetailImage.isEmpty() ? productDetailImage : null
+            );
+            return ResponseEntity.ok("\"성공\"");
+        } catch (Exception e) {
+            log.error("상품 등록 중 오류 발생: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
     @Operation(summary = "업로드 이미지 확인")
     @GetMapping("/read/all-upload-images")
     public ResponseEntity<List<UploadImageReadDTO>> getUploadImageAll() {
@@ -177,18 +195,82 @@ public class ProductController {
         return ResponseEntity.ok("\"성공\"");
     }
 
+    @PutMapping(value = "/update/stock", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> updateProductStock(@RequestPart(name = "excel") MultipartFile excel) {
+        // Check if the file is empty
+        if (excel.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("엑셀 파일이 업로드되지 않았습니다.");
+        }
+
+        // Validate file type
+        String contentType = excel.getContentType();
+        if (contentType == null || !contentType.equals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("유효하지 않은 파일 형식입니다. 엑셀 파일만 업로드할 수 있습니다.");
+        }
+
+        try {
+            // Process the file
+            excelService.parseStockExcelFile(excel);
+            return ResponseEntity.ok("\"성공\"");
+        } catch (IOException e) {
+            // Log the exception and return a server error response
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("파일 처리 중 오류가 발생했습니다.");
+        } catch (Exception e) {
+            // Handle other exceptions
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("예상치 못한 오류가 발생했습니다.");
+        }
+    }
+
+
+
+
+
+
     @Operation(summary = "엑셀 다운로드")
     @GetMapping("/download/excel")
     public void download(HttpServletResponse response) throws IOException {
-        byte[] excelFile = productService.generateExcelFile();
+        byte[] excelFile = excelService.generateExcelFile();
 
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        response.setHeader("Content-Disposition", "attachment;filename=spring_excel_download.xlsx");
+        response.setHeader("Content-Disposition", "attachment;filename=productList.xlsx");
         try (ServletOutputStream outputStream = response.getOutputStream()) {
             outputStream.write(excelFile);
             outputStream.flush();
         }
     }
+
+    @Operation(summary = "새 엑셀 다운로드")
+    @GetMapping("/download/new-excel")
+    public void downloadNewExcel(HttpServletResponse response) throws IOException {
+        byte[] excelFile = excelService.newGenerateExcelFile();
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-Disposition", "attachment;filename=productList.xlsx");
+        try (ServletOutputStream outputStream = response.getOutputStream()) {
+            outputStream.write(excelFile);
+            outputStream.flush();
+        }
+    }
+
+
+    @Operation(summary = "재고 엑셀 다운로드")
+    @GetMapping("/download/stock-excel")
+    public void downloadStockExcel(HttpServletResponse response) throws IOException {
+        byte[] excelFile = excelService.generateStockExcelFile();
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-Disposition", "attachment;filename=productStock.xlsx");
+        try (ServletOutputStream outputStream = response.getOutputStream()) {
+            outputStream.write(excelFile);
+            outputStream.flush();
+        }
+    }
+
+
 }
 
 

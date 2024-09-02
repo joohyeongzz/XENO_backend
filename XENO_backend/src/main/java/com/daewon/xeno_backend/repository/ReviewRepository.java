@@ -2,6 +2,7 @@ package com.daewon.xeno_backend.repository;
 
 
 import com.daewon.xeno_backend.domain.Orders;
+import com.daewon.xeno_backend.domain.Products;
 import com.daewon.xeno_backend.domain.Review;
 import com.daewon.xeno_backend.domain.auth.Users;
 import org.springframework.data.domain.Page;
@@ -11,6 +12,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -29,5 +31,8 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     @Query("select r from Review r where r.users = :users and r.order = :orders")
     Review findByUsersAndOrders(Users users, Orders orders);
+
+//    // 특정 제품에 대한 모든 리뷰를 찾는 메서드
+//    List<Review> findByProducts(Products products);
 
 }

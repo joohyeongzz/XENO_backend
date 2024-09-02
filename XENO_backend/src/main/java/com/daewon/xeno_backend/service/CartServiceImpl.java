@@ -99,6 +99,8 @@ public class CartServiceImpl implements CartService {
         cartRepository.save(cart);
     }
 
+
+    // 장바구니 목록 전체 삭제
     @Override
     public boolean removeFromCart(Long cartId) {
         if (cartRepository.existsById(cartId)) {

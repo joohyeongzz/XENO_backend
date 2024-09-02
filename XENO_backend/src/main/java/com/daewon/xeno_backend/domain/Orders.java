@@ -30,9 +30,14 @@ public class Orders extends BaseEntity {
   private ProductsOption productsOption;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "userId", referencedColumnName = "userId")
+  @JoinColumn(name = "customerId", referencedColumnName = "customerId")
   @OnDelete(action = OnDeleteAction.CASCADE)
-  private Users user;
+  private Users customer;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "brandId", referencedColumnName = "brandId")
+  @OnDelete(action = OnDeleteAction.CASCADE)
+  private Users seller;
 
   @Column(nullable = false)
   private Long orderNumber;
@@ -47,4 +52,5 @@ public class Orders extends BaseEntity {
   // 총 합 가격
   private Long amount;
 
+  private int usePoint;
 }
