@@ -23,6 +23,9 @@ public class AuthSigninDTO implements UserDetails {
 
     private Collection<? extends GrantedAuthority> authorities;
 
+    // 기본 생성자 추가
+    public AuthSigninDTO() {
+    }
 
     public AuthSigninDTO(Long userId, String email, String password,
                          String name, Collection<? extends GrantedAuthority> authorities) {

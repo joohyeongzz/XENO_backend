@@ -1,12 +1,12 @@
 package com.daewon.xeno_backend.controller;
 
-import com.daewon.xeno_backend.domain.Users;
+import com.daewon.xeno_backend.domain.auth.Users;
 import com.daewon.xeno_backend.dto.auth.AuthSigninDTO;
 import com.daewon.xeno_backend.dto.cart.AddToCartDTO;
 import com.daewon.xeno_backend.dto.cart.CartDTO;
 import com.daewon.xeno_backend.dto.cart.CartSummaryDTO;
 import com.daewon.xeno_backend.dto.cart.CartUpdateDTO;
-import com.daewon.xeno_backend.repository.UserRepository;
+import com.daewon.xeno_backend.repository.auth.UserRepository;
 import com.daewon.xeno_backend.service.CartService;
 import com.daewon.xeno_backend.utils.JWTUtil;
 import io.jsonwebtoken.JwtException;
@@ -35,8 +35,7 @@ public class CartController {
     private final JWTUtil jwtUtil;
     private final UserRepository userRepository;
 
-    @Value("${org.daewon.upload.path}")
-    private String uploadPath;
+
 
     @PreAuthorize("hasRole('USER')")
     @PostMapping(produces = "application/json")
@@ -200,7 +199,7 @@ public class CartController {
     http://localhost:8090/api/cart
     {
         "userId": 1,
-        "productColorSizeId": 1,
+        "productOptionId": 1,
         "productImageId": 1,
         "quantity": 2
     }

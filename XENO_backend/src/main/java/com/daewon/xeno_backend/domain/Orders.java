@@ -1,6 +1,7 @@
 package com.daewon.xeno_backend.domain;
 
 
+import com.daewon.xeno_backend.domain.auth.Users;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.OnDelete;
@@ -24,14 +25,19 @@ public class Orders extends BaseEntity {
   private String orderPayId;
 
   @ManyToOne()  // fetch = FetchType.LAZY
-  @JoinColumn(name = "productColorSizeId", referencedColumnName = "productColorSizeId")
+  @JoinColumn(name = "productOptionId", referencedColumnName = "productOptionId")
   @OnDelete(action = OnDeleteAction.CASCADE)
-  private ProductsColorSize productsColorSize;
+  private ProductsOption productsOption;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "userId", referencedColumnName = "userId")
+  @JoinColumn(name = "customerId", referencedColumnName = "customerId")
   @OnDelete(action = OnDeleteAction.CASCADE)
-  private Users user;
+  private Users customer;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "brandId", referencedColumnName = "brandId")
+  @OnDelete(action = OnDeleteAction.CASCADE)
+  private Users seller;
 
   @Column(nullable = false)
   private Long orderNumber;
@@ -46,4 +52,5 @@ public class Orders extends BaseEntity {
   // 총 합 가격
   private Long amount;
 
+  private int usePoint;
 }

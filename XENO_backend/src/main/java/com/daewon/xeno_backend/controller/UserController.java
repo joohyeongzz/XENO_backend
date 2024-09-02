@@ -1,8 +1,12 @@
 package com.daewon.xeno_backend.controller;
 
+import com.daewon.xeno_backend.domain.auth.Users;
+import com.daewon.xeno_backend.dto.auth.TokenDTO;
 import com.daewon.xeno_backend.dto.reply.ReplyReadDTO;
+import com.daewon.xeno_backend.dto.user.UserUpdateDTO;
 import com.daewon.xeno_backend.exception.UserNotFoundException;
 import com.daewon.xeno_backend.repository.RefreshTokenRepository;
+import com.daewon.xeno_backend.service.AuthService;
 import com.daewon.xeno_backend.service.ReplyService;
 import com.daewon.xeno_backend.utils.JWTUtil;
 import io.jsonwebtoken.JwtException;
@@ -10,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,6 +31,7 @@ public class UserController {
     private final RefreshTokenRepository refreshTokenRepository;
     private final JWTUtil jwtUtil;
     private final ReplyService replyService;
+    private final AuthService authService;
 
     // 클라이언트가 accessToken을 서버에 보내면
     // 서버에서 해당 토큰을 검증하고 payload 전체를 JSON 형식으로 클라이언트에게 반환이 가능
@@ -71,6 +77,25 @@ public class UserController {
         }
     }
 
+    // refreshToken으로 accessToken을 재발급하는 메서드, accessToken과 refreshToken값을 같이 JSON 값으로 넘겨줘야함.
+    @PostMapping("/refreshToken")
+    public ResponseEntity<?> refreshToken(@RequestBody TokenDTO tokenDTO) {
+        log.info("RefreshToken 토큰 요청을 합니다.");
+
+        String refreshToken = tokenDTO.getRefreshToken();
+
+        try {
+            // refreshToken을 검증하고 새로운 accessToken을 발급
+            TokenDTO newTokenDto = authService.tokenReissue(refreshToken);
+
+            log.info("새로운 access token 발급 생성 완료");
+            return ResponseEntity.ok(newTokenDto);
+        } catch (Exception e) {
+            log.error("refresh token이 맞지 않음: " + e.getMessage());
+            return ResponseEntity.status(403).body("refresh token이 맞지 않음");
+        }
+    }
+
     @PostMapping("/logout")
     public ResponseEntity<String> logout(@RequestHeader("Authorization") String token) {
         log.info("logout token(successToken) : " + token);
@@ -83,6 +108,33 @@ public class UserController {
         SecurityContextHolder.clearContext();
 
         return ResponseEntity.ok("Logout successful");
+    }
+
+    // user정보 수정
+    @PutMapping("/update")
+    public ResponseEntity<?> updateUser(@RequestBody UserUpdateDTO updateDTO, Authentication authentication) {
+        try {
+            String userEmail = authentication.getName();
+            Users updateUser = authService.updateUser(userEmail, updateDTO);
+
+            return ResponseEntity.status(201).body("user정보 수정 완료 : " + updateUser);
+        } catch (UserNotFoundException e) {
+            return ResponseEntity.status(404).body("user정보를 찾을 수 없습니다.");
+        }
+    }
+
+    // user 탈퇴 메서드
+    @DeleteMapping("/delete")
+    public ResponseEntity<String> deleteUser(Authentication authentication) {
+        try {
+            String userEmail = authentication.getName();
+            authService.deleteUser(userEmail);
+            return ResponseEntity.ok("User 삭제 성공");
+        } catch (UserNotFoundException e) {
+            return ResponseEntity.status(404).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("user를 삭제하는 중 오류가 발생함.");
+        }
     }
 
     // 특정 사용자가 작성한 Reply 목록 조회

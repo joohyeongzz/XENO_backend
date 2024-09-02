@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class AddToCartDTO {
 
-    private Long productColorSizeId;
+    private Long productOptionId;
 
     private Long quantity;  // 수량
 

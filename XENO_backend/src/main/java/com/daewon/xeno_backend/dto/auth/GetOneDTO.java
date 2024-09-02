@@ -11,4 +11,5 @@ public class GetOneDTO {
 
     private String phoneNumber;
     private String address;
+    private int point;
 }

@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 public class CartDTO {
 
     private Long cartId;
-    private Long productsColorSizeId;
+    private Long productsOptionId;
     private Long quantity;
     private Long amount;
     private String brandName;

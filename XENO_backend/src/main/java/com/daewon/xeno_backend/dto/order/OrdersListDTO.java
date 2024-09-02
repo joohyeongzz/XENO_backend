@@ -14,7 +14,7 @@ import java.util.List;
 public class OrdersListDTO {
 
     private String req;
-    private Long ProductColorSizeId;
+    private Long ProductOptionId;
     private Long orderNumber;
     private LocalDateTime orderDate;
     private String brandName;

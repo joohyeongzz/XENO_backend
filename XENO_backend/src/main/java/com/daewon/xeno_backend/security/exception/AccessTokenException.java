@@ -15,10 +15,10 @@ public class AccessTokenException extends RuntimeException {
     TOKEN_ERROR token_error;
 
     public enum TOKEN_ERROR {
-        UNACCEPT(401, "Token is null or to short"),
-        BADTYPE(401, "Token type Bearer"),
-        MALFORM(403, "Malformed Token"),
-        BADSIGN(403, "BadSignatured Token"),
+        UNACCEPT(401, "Token is null or Short"),
+        BADTYPE(401, "Token Type is not Bearer"),
+        MALFORM(403, "Token is malformed"),
+        BADSIGN(403, "This is a token whose Signature value does not match."),
         EXPIRED(403, "Expired Token");
 
         private int status;
@@ -49,7 +49,7 @@ public class AccessTokenException extends RuntimeException {
 
         Gson gson = new Gson();
 
-        String responseStr = gson.toJson(Map.of("msg", token_error.getMsg(), "time", new Date()));
+        String responseStr = gson.toJson(Map.of("message", token_error.getMsg(), "time", new Date()));
 
         try {
             response.getWriter().println(responseStr);

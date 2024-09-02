@@ -1,11 +1,11 @@
 package com.daewon.xeno_backend.domain;
 
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 
 @Entity
@@ -19,6 +19,7 @@ public class Products {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY) // auto_increment와 같은
+
   private long productId;
 
   private String brandName;
@@ -38,6 +39,9 @@ public class Products {
   private String productNumber;
 
   private String season;
+
+  private String color;
+
 
   public boolean getIsSale() {
     return isSale;

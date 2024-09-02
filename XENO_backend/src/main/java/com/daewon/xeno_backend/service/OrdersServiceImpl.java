@@ -1,6 +1,7 @@
 package com.daewon.xeno_backend.service;
 
 import com.daewon.xeno_backend.domain.*;
+import com.daewon.xeno_backend.domain.auth.Users;
 import com.daewon.xeno_backend.dto.auth.GetOneDTO;
 import com.daewon.xeno_backend.dto.order.*;
 import com.daewon.xeno_backend.dto.page.PageInfinityResponseDTO;
@@ -8,6 +9,10 @@ import com.daewon.xeno_backend.dto.page.PageRequestDTO;
 import com.daewon.xeno_backend.dto.product.ProductHeaderDTO;
 import com.daewon.xeno_backend.exception.UserNotFoundException;
 import com.daewon.xeno_backend.repository.*;
+import com.daewon.xeno_backend.repository.Products.ProductsImageRepository;
+import com.daewon.xeno_backend.repository.Products.ProductsOptionRepository;
+import com.daewon.xeno_backend.repository.Products.ProductsSellerRepository;
+import com.daewon.xeno_backend.repository.auth.UserRepository;
 import io.jsonwebtoken.io.IOException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -24,10 +29,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,22 +39,12 @@ public class OrdersServiceImpl implements OrdersService {
 
     private final UserRepository userRepository;
     private final OrdersRepository ordersRepository;
-    private final ProductsColorSizeRepository productsColorSizeRepository;
+    private final ProductsOptionRepository productsOptionRepository;
     private final ProductsImageRepository productsImageRepository;
     private final ProductsSellerRepository productsSellerRepository;
     private final ReviewRepository reviewRepository;
 
 
-    @Value("${org.daewon.upload.path}")
-    private String uploadPath;
-
-    public byte[] getImage(String uuid, String fileName) throws IOException, java.io.IOException {
-        String filePath = uploadPath + uuid + "_" + fileName;
-        // 파일을 바이트 배열로 읽기
-        Path path = Paths.get(filePath);
-        byte[] image = Files.readAllBytes(path);
-        return image;
-    }
 
 
     @Override
@@ -60,13 +52,13 @@ public class OrdersServiceImpl implements OrdersService {
         Users user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
         log.info("user: " + userId);
-        List<Orders> orders = ordersRepository.findByUser(user);
+        List<Orders> orders = ordersRepository.findByCustomer(user);
         return orders.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
 
     @Override
     public String getLatestReqForUser(String email) {
-        return ordersRepository.findTopByUserEmailOrderByCreateAtDesc(email)
+        return ordersRepository.findTopByCustomerEmailOrderByCreateAtDesc(email)
                 .map(Orders::getReq)
                 .orElse(null);
     }
@@ -86,11 +78,13 @@ public class OrdersServiceImpl implements OrdersService {
         List<Orders> savedOrders = new ArrayList<>();
 
         for(OrdersDTO dto : ordersDTO) {
+            ProductsSeller seller = productsSellerRepository.findByProducts(findProductOption(dto.getProductOptionId()).getProducts());
             Orders orders  = Orders.builder()
                 .orderPayId(orderPayId)
                 .orderNumber(orderNumber)
-                .productsColorSize(findProductColorSize(dto.getProductColorSizeId()))
-                .user(users)
+                .productsOption(findProductOption(dto.getProductOptionId()))
+                .customer(users)
+                .seller(seller.getUsers())
                 .status("결제 완료")
                 .req(dto.getReq())
                 .quantity(dto.getQuantity())
@@ -130,7 +124,7 @@ public class OrdersServiceImpl implements OrdersService {
         log.info("email: " + email);
 
         // 주문한 사용자와 현재 인증된 사용자가 일치하는지 확인
-        if (!orders.getUser().getEmail().equals(email)) {
+        if (!orders.getCustomer().getEmail().equals(email)) {
             throw new UserNotFoundException("User not found");
         }
 
@@ -138,8 +132,8 @@ public class OrdersServiceImpl implements OrdersService {
                 orders.getOrderId(),
                 orders.getOrderPayId(),
                 String.valueOf(orders.getOrderNumber()),
-                orders.getUser().getName(),
-                orders.getUser().getAddress(),
+                orders.getCustomer().getName(),
+                orders.getCustomer().getAddress(),
                 orders.getAmount(),
                 orders.getQuantity()
         );
@@ -150,24 +144,24 @@ public class OrdersServiceImpl implements OrdersService {
         OrdersListDTO ordersListDTO = new OrdersListDTO();
 
         ordersListDTO.setReq(orders.getReq());
-        ordersListDTO.setProductColorSizeId(orders.getProductsColorSize().getProductColorSizeId());
+        ordersListDTO.setProductOptionId(orders.getProductsOption().getProductOptionId());
         ordersListDTO.setOrderNumber(orders.getOrderNumber());
         ordersListDTO.setOrderDate(orders.getCreateAt());
-        ordersListDTO.setBrandName(orders.getProductsColorSize().getProductsColor().getProducts().getBrandName());
+        ordersListDTO.setBrandName(orders.getProductsOption().getProducts().getBrandName());
         ordersListDTO.setStatus(orders.getStatus());
         ordersListDTO.setAmount(orders.getAmount());
         ordersListDTO.setQuantity(orders.getQuantity());
 
         // GetOneDTO 리스트 생성 및 설정
         List<GetOneDTO> getOneList = new ArrayList<>();
-        getOneList.add(createGetOneDTO(orders.getUser()));
+        getOneList.add(createGetOneDTO(orders.getCustomer()));
         ordersListDTO.setGetOne(getOneList);
 
         return ordersListDTO;
     }
 
     private GetOneDTO createGetOneDTO(Users users) {
-        return new GetOneDTO(users.getPhoneNumber(), users.getAddress());
+        return new GetOneDTO(users.getPhoneNumber(), users.getAddress(),users.getCustomer().getPoint());
     }
 
     // 주문번호 orderNumber 랜덤생성
@@ -205,9 +199,9 @@ public class OrdersServiceImpl implements OrdersService {
         return orderPayId.toString();
     }
 
-    private ProductsColorSize findProductColorSize(Long productColorSizeId) {
-        return productsColorSizeRepository.findById(productColorSizeId)
-                .orElseThrow(() -> new EntityNotFoundException("ProductsColorSize not found with id: " + productColorSizeId));
+    private ProductsOption findProductOption(Long productOptionId) {
+        return productsOptionRepository.findById(productOptionId)
+                .orElseThrow(() -> new EntityNotFoundException("ProductsOption not found with id: " + productOptionId));
     }
 
 
@@ -222,7 +216,7 @@ public class OrdersServiceImpl implements OrdersService {
 
         Users users = userRepository.findByEmail(email).orElseThrow(() -> new EntityNotFoundException("User not found"));
 
-        Page<Orders> orders = ordersRepository.findPagingOrdersByUser(pageable,users);
+        Page<Orders> orders = ordersRepository.findPagingOrdersByCustomer(pageable,users);
 
         List<OrdersCardListDTO> dtoList = new ArrayList<>();
 
@@ -246,22 +240,12 @@ public class OrdersServiceImpl implements OrdersService {
                 dto.setStatus(order.getStatus());
                 dto.setAmount(order.getAmount());
                 dto.setQuantity(order.getQuantity());
-                dto.setColor(order.getProductsColorSize().getProductsColor().getColor());
-                dto.setSize(order.getProductsColorSize().getSize().name());
-                dto.setBrandName(order.getProductsColorSize().getProductsColor().getProducts().getBrandName());
-                dto.setProductName(order.getProductsColorSize().getProductsColor().getProducts().getName());
-                dto.setProductColorId(order.getProductsColorSize().getProductsColor().getProductColorId());
-                ProductsImage productsImage = productsImageRepository.findFirstByProductColorId(order.getProductsColorSize().getProductsColor().getProductColorId());
-                if (productsImage != null) {
-                    try {
-                        byte[] data = getImage(productsImage.getUuid(), productsImage.getFileName());
-                        dto.setProductImage(data);
-                    } catch (java.io.IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                } else {
-                    dto.setProductImage(null);
-                }
+                dto.setColor(order.getProductsOption().getProducts().getColor());
+                dto.setSize(order.getProductsOption().getSize());
+                dto.setBrandName(order.getProductsOption().getProducts().getBrandName());
+                dto.setProductName(order.getProductsOption().getProducts().getName());
+                dto.setProductId(order.getProductsOption().getProducts().getProductId());
+
                 dtoList.add(dto);
             }
 
@@ -285,9 +269,9 @@ public class OrdersServiceImpl implements OrdersService {
         Orders orders = ordersRepository.findByOrderIdAndUserId(orderId,users);
         log.info(orders);
         ProductHeaderDTO dto = new ProductHeaderDTO();
-        dto.setProductColorId(orders.getProductsColorSize().getProductsColor().getProductColorId());
-        dto.setName(orders.getProductsColorSize().getProductsColor().getProducts().getName());
-        dto.setColor(orders.getProductsColorSize().getProductsColor().getColor());
+        dto.setProductId(orders.getProductsOption().getProducts().getProductId());
+        dto.setName(orders.getProductsOption().getProducts().getName());
+        dto.setColor(orders.getProductsOption().getProducts().getColor());
 
         return dto;
     }
@@ -295,10 +279,11 @@ public class OrdersServiceImpl implements OrdersService {
     private OrdersDTO convertToDT1(Orders order) {
         return new OrdersDTO(
                 order.getOrderPayId(),
-                order.getProductsColorSize().getProductColorSizeId(),
+                order.getProductsOption().getProductOptionId(),
                 order.getReq(),
                 order.getQuantity(),
-                order.getAmount()
+                order.getAmount(),
+                order.getUsePoint()
         );
     }
 
@@ -316,14 +301,14 @@ public class OrdersServiceImpl implements OrdersService {
                 dto.setOrderID(order.getOrderId());
                 dto.setOrderNumber(order.getOrderNumber());
                 dto.setQuantity(order.getQuantity());
-                dto.setSize(order.getProductsColorSize().getSize().name());
-                dto.setColor(order.getProductsColorSize().getProductsColor().getColor());
+                dto.setSize(order.getProductsOption().getSize());
+                dto.setColor(order.getProductsOption().getProducts().getColor());
                 dto.setStatus(order.getStatus());
-                dto.setProductName(order.getProductsColorSize().getProductsColor().getProducts().getName());
+                dto.setProductName(order.getProductsOption().getProducts().getName());
                 dto.setOrderDate(order.getCreateAt().format(formatter));
                 dto.setReq(order.getReq());
                 dto.setAmount(order.getAmount());
-                dto.setCustomerName(order.getUser().getName());
+                dto.setCustomerName(order.getCustomer().getName());
                 list.add(dto);
             }
         }
@@ -341,8 +326,10 @@ public class OrdersServiceImpl implements OrdersService {
         ordersRepository.save(orders);
 
         log.info(orders);
+    }
 
-
-
+    @Override
+    public Map<Integer, Boolean> getSalesByYear() {
+        return Map.of();
     }
 }

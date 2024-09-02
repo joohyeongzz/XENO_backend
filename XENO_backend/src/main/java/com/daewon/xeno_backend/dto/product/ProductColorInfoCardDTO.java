@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class ProductColorInfoCardDTO {
 
-    private long productColorId;
+    private long productId;
 
     private String brandName;
 
@@ -36,6 +36,6 @@ public class ProductColorInfoCardDTO {
 
     private String color;
 
-    private byte[] productImage;
+    private String productImage;
 
 }

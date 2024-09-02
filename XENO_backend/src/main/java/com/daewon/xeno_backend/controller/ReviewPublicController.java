@@ -6,10 +6,10 @@ import com.daewon.xeno_backend.dto.page.PageResponseDTO;
 import com.daewon.xeno_backend.dto.review.ReviewCardDTO;
 import com.daewon.xeno_backend.dto.review.ReviewInfoDTO;
 import com.daewon.xeno_backend.dto.review.ReviewUpdateDTO;
-import com.daewon.xeno_backend.repository.ProductsImageRepository;
+import com.daewon.xeno_backend.repository.Products.ProductsImageRepository;
 import com.daewon.xeno_backend.repository.ReviewImageRepository;
 import com.daewon.xeno_backend.repository.ReviewRepository;
-import com.daewon.xeno_backend.repository.UserRepository;
+import com.daewon.xeno_backend.repository.auth.UserRepository;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.daewon.xeno_backend.dto.review.ReviewCreateDTO;
@@ -133,8 +133,8 @@ public class ReviewPublicController {
 
     @Operation(summary = "리뷰 리스트")
     @GetMapping("/read/list")
-    public ResponseEntity<PageResponseDTO<ReviewInfoDTO>> getReviewListByProductColorId(@RequestParam Long productColorId, PageRequestDTO pageRequestDTO) {
-        PageResponseDTO<ReviewInfoDTO> reviews = reviewService.readReviewList(productColorId,pageRequestDTO);
+    public ResponseEntity<PageResponseDTO<ReviewInfoDTO>> getReviewListByproductId(@RequestParam Long productId, PageRequestDTO pageRequestDTO) {
+        PageResponseDTO<ReviewInfoDTO> reviews = reviewService.readReviewList(productId,pageRequestDTO);
         return ResponseEntity.ok(reviews);
     }
 

@@ -1,7 +1,7 @@
  package com.daewon.xeno_backend.controller;
 
 
- import com.daewon.xeno_backend.repository.ProductsLikeRepository;
+ import com.daewon.xeno_backend.repository.Products.ProductsLikeRepository;
  import com.daewon.xeno_backend.service.LikeService;
  import io.swagger.v3.oas.annotations.Operation;
  import lombok.RequiredArgsConstructor;
@@ -24,11 +24,11 @@
 
 
      @Operation(summary = "좋아요")
-     @PreAuthorize("hasRole('USER')")
+     @PreAuthorize("hasRole('CUSTOMER')")
      @GetMapping()
-     public ResponseEntity<String> like(@RequestParam Long productColorId) {
+     public ResponseEntity<String> like(@RequestParam Long productId) {
          try {
-         likeService.likeProduct(productColorId);
+         likeService.likeProduct(productId);
              return ResponseEntity.ok("\"좋아요 성공\"");
          } catch (Exception e) {
              // 오류 발생 시
