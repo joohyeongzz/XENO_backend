@@ -43,8 +43,7 @@ public class OrdersServiceImpl implements OrdersService {
     private final ProductsImageRepository productsImageRepository;
     private final ProductsSellerRepository productsSellerRepository;
     private final ReviewRepository reviewRepository;
-
-
+    private final DeliveryTrackRepository deliveryTrackRepository;
 
 
     @Override
@@ -223,8 +222,6 @@ public class OrdersServiceImpl implements OrdersService {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd");
 
 
-
-
                 for(Orders order : orders.getContent()) {
                 OrdersCardListDTO dto = new OrdersCardListDTO();
                 Review reviews = reviewRepository.findByUsersAndOrders(users,order);
@@ -234,7 +231,8 @@ public class OrdersServiceImpl implements OrdersService {
                 } else{
                     dto.setReview(false);
                 }
-
+                DeliveryTrack deliveryTrack = deliveryTrackRepository.findByOrders(order);
+                ProductsImage image = productsImageRepository.findByProductId(order.getProductsOption().getProducts().getProductId());
                 dto.setOrderId(order.getOrderId());
                 dto.setOrderDate(order.getCreateAt().format(formatter));
                 dto.setStatus(order.getStatus());
@@ -245,10 +243,18 @@ public class OrdersServiceImpl implements OrdersService {
                 dto.setBrandName(order.getProductsOption().getProducts().getBrandName());
                 dto.setProductName(order.getProductsOption().getProducts().getName());
                 dto.setProductId(order.getProductsOption().getProducts().getProductId());
-
+                dto.setCustomerName(users.getName());
+                dto.setAddress(users.getAddress());
+                if (deliveryTrack != null) {
+                    dto.setTrackingNumber(deliveryTrack.getTrackingNumber());
+                    dto.setCarrierId(deliveryTrack.getCarrierId());
+                } else {
+                    dto.setTrackingNumber(null);
+                    dto.setCarrierId(null);
+                }
+                dto.setProductImage(image.getUrl_1());
                 dtoList.add(dto);
             }
-
 
         return PageInfinityResponseDTO.<OrdersCardListDTO>withAll()
                 .pageRequestDTO(pageRequestDTO)
