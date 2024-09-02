@@ -1,0 +1,48 @@
+# .github/workflows/ci-cd.yml
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main # 또는 배포할 브랜치aa
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17' # 사용하는 Java 버전
+          distribution: 'temurin'
+
+      - name: Grant execute permission for Gradle Wrapper
+        run: chmod +x ./gradlew
+
+      - name: Build with Gradle
+        run: ./gradlew build -x test
+
+      - name: Build Docker image
+        run: |
+          docker build -t xenoback:latest .
+          docker tag xenoback:latest joohyeongzz/xenoback:latest
+
+      - name: Push Docker image to Docker Hub
+        run: |
+          echo "${{ secrets.DOCKER_HUB_PASSWORD }}" | docker login -u joohyeongzz --password-stdin
+          docker push joohyeongzz/xenoback:latest
+
+      - name: Deploy to EC2
+        run: |
+            echo "${{ secrets.SSH_PEM_KEY }}" >> $HOME/key.pem
+            chmod 400 $HOME/key.pem
+            ssh -i $HOME/key.pem -o StrictHostKeyChecking=no ubuntu@3.36.106.72<< EOF
+              docker pull joohyeongzz/xenoback:latest
+              chmod 777 ./deploy.sh
+              ./deploy.sh
+              docker image prune -f
+            EOF
