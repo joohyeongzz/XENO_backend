@@ -11,6 +11,10 @@ import java.util.Map;
 
 public interface OrdersService {
 
+    void cancelOrder(OrderCancelDTO dto);
+
+    void refundOrder(OrderCancelDTO dto);
+
     List<OrdersListDTO> getAllOrders(Long userId);
 
     List<OrdersDTO> createOrders(List<OrdersDTO> ordersDTO, String email);
@@ -30,8 +34,6 @@ public interface OrdersService {
     void updateOrderStatusBySeller(OrdersStatusUpdateDTO dto);
 
     String getLatestReqForUser(String email);
-
-    Map<Integer, Boolean> getSalesByYear();
 
 
 }

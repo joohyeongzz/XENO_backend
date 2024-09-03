@@ -21,6 +21,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -86,20 +87,21 @@ public class OrdersController {
         try {
             String userEmail = userDetails.getUsername();
 
-            Customer customer = customerRepository.findByUserId(userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new UserNotFoundException("User not found")).getUserId())
-                .orElseThrow(() -> new UserNotFoundException("Customer not found"));
+//            Customer customer = customerRepository.findByUserId(userRepository.findByEmail(userEmail)
+//                .orElseThrow(() -> new UserNotFoundException("User not found")).getUserId())
+//                .orElseThrow(() -> new UserNotFoundException("Customer not found"));
+//
+//            int usedPoint = ordersDTO.stream().mapToInt(OrdersDTO::getUsedPoint).sum();
+//            if (usedPoint > customer.getPoint()) {
+//                return ResponseEntity.status(400).body("사용 가능한 적립금이 부족합니다.");
+//            }
+//            customer.setPoint(customer.getPoint() - usedPoint);
+//            customerRepository.save(customer);
+//
+//            // 상품 가격에서 사용한 적립금만큼 차감
+//            ordersDTO.forEach(dto -> dto.setAmount(dto.getAmount() - dto.getUsedPoint()));
 
-            int usedPoint = ordersDTO.stream().mapToInt(OrdersDTO::getUsedPoint).sum();
-            if (usedPoint > customer.getPoint()) {
-                return ResponseEntity.status(400).body("사용 가능한 적립금이 부족합니다.");
-            }
-            customer.setPoint(customer.getPoint() - usedPoint);
-            customerRepository.save(customer);
-
-            // 상품 가격에서 사용한 적립금만큼 차감
-            ordersDTO.forEach(dto -> dto.setAmount(dto.getAmount() - dto.getUsedPoint()));
-
+            log.info(ordersDTO);
             List<OrdersDTO> createdOrder = ordersService.createOrders(ordersDTO, userEmail);
             return ResponseEntity.ok(createdOrder);
         } catch (Exception e) {
@@ -255,20 +257,75 @@ public class OrdersController {
         }
     }
 
-    @GetMapping("/salesByYear")
-    public ResponseEntity<Map<Integer, Boolean>> getSalesByYear() {
-        Map<Integer, Boolean> salesByYear = ordersService.getSalesByYear();
-        return ResponseEntity.ok(salesByYear);
+    @PreAuthorize("hasRole('USER')")
+    @PutMapping(value = "/cancel",produces = "application/json")
+    public ResponseEntity<?> cancelOrder(
+            @RequestBody OrderCancelDTO dto) {
+        try {
+            log.info(dto);
+            ordersService.cancelOrder(dto);
+            return ResponseEntity.ok("\"성공\"");
+        } catch (Exception e) {
+            return ResponseEntity.status(404).body("해당하는 주문이 없습니다.");
+        }
+    }
+
+    @PreAuthorize("hasRole('USER')")
+    @PutMapping(value = "/request-refund",produces = "application/json")
+    public ResponseEntity<?> refundRequestOrder(
+            @RequestBody OrderCancelDTO dto) {
+        try {
+            ordersService.refundOrder(dto);
+            return ResponseEntity.ok("\"성공\"");
+        } catch (Exception e) {
+            return ResponseEntity.status(404).body("해당하는 주문이 없습니다.");
+        }
+    }
+
+    @Operation(summary = "환불 요청 상품 엑셀 다운로드")
+    @GetMapping("/download/order-refund-excel")
+    public void downloadOrderByRefundExcel(HttpServletResponse response) throws IOException {
+        byte[] excelFile = excelService.generateCancelOrderExcel();
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-Disposition", "attachment;filename=order.xlsx");
+        try (ServletOutputStream outputStream = response.getOutputStream()) {
+            outputStream.write(excelFile);
+            outputStream.flush();
+        }
     }
 
 
+    @PutMapping(value = "/refund", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> refundOrder(@RequestPart(name = "excel") MultipartFile excel) {
+        // Check if the file is empty
+        if (excel.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("엑셀 파일이 업로드되지 않았습니다.");
+        }
 
+        // Validate file type
+        String contentType = excel.getContentType();
+        if (contentType == null || !contentType.equals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("유효하지 않은 파일 형식입니다. 엑셀 파일만 업로드할 수 있습니다.");
+        }
 
-
-
-
-
-
+        try {
+            // Process the file
+            excelService.parseCancelOrderExcelFile(excel);
+            return ResponseEntity.ok("성공");
+        } catch (IOException e) {
+            // Log the exception and return a server error response
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("파일 처리 중 오류가 발생했습니다.");
+        } catch (Exception e) {
+            // Handle other exceptions
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("예상치 못한 오류가 발생했습니다.");
+        }
+    }
 
 }
 
