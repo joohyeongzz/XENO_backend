@@ -17,14 +17,24 @@ import io.jsonwebtoken.io.IOException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import net.minidev.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.client.RestTemplate;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -44,6 +54,7 @@ public class OrdersServiceImpl implements OrdersService {
     private final ProductsSellerRepository productsSellerRepository;
     private final ReviewRepository reviewRepository;
     private final DeliveryTrackRepository deliveryTrackRepository;
+    private final OrdersRefundRepository ordersRefundRepository;
 
 
     @Override
@@ -309,7 +320,7 @@ public class OrdersServiceImpl implements OrdersService {
             List<Orders> orders = ordersRepository.findByProductId(productsSeller.getProducts().getProductId());
             for(Orders order : orders) {
                 OrderInfoBySellerDTO dto = new OrderInfoBySellerDTO();
-                dto.setOrderID(order.getOrderId());
+                dto.setOrderId(order.getOrderId());
                 dto.setOrderNumber(order.getOrderNumber());
                 dto.setQuantity(order.getQuantity());
                 dto.setSize(order.getProductsOption().getSize());
@@ -340,7 +351,62 @@ public class OrdersServiceImpl implements OrdersService {
     }
 
     @Override
-    public Map<Integer, Boolean> getSalesByYear() {
-        return Map.of();
+    public void cancelOrder(OrderCancelDTO dto) {
+        Orders orders = ordersRepository.findById(dto.getOrderId()).orElse(null);
+        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = getHeaders();
+        JSONObject params = new JSONObject();
+        params.put("cancelReason", dto.getReason());
+        params.put("cancelAmount", orders.getAmount());
+        String url = "https://api.tosspayments.com/v1/payments/" + orders.getPaymentKey() + "/cancel";
+        HttpEntity<String> requestEntity = new HttpEntity<>(params.toString(), headers);
+
+        try {
+            ResponseEntity<Map> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    requestEntity,
+                    Map.class
+            );
+
+            // Check the response and update order status
+            if (response.getStatusCode().is2xxSuccessful()) {
+                // Update order status to "환불 완료" (Refunded)
+                orders.setStatus("환불 완료");
+                ordersRepository.save(orders);
+                log.info("Order status updated to 환불 완료 for order ID: " + dto.getOrderId());
+            } else {
+                log.error("Failed to cancel payment. Response code: " + response.getStatusCode());
+            }
+        } catch (Exception e) {
+            log.error("Error occurred while canceling the payment: ", e);
+        }
+    }
+
+
+    private HttpHeaders getHeaders(){
+        HttpHeaders httpHeaders = new HttpHeaders();
+        String testAPIKey = new String(Base64.getEncoder().encode("test_sk_PBal2vxj814Q4P6pa7vkr5RQgOAN:".getBytes(StandardCharsets.UTF_8)));
+        httpHeaders.setBasicAuth(testAPIKey);
+        httpHeaders.setContentType(MediaType.APPLICATION_JSON);
+        httpHeaders.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+        httpHeaders.set("Idempotency-Key", generateIdempotencyKey());
+        return httpHeaders;
+    }
+
+    private String generateIdempotencyKey() {
+        return UUID.randomUUID().toString();
+    }
+
+    @Override
+    public void refundOrder(OrderCancelDTO dto) {
+        Orders orders = ordersRepository.findById(dto.getOrderId()).orElse(null);
+        orders.setStatus("환불 요청");
+        OrdersRefund ordersRefund = OrdersRefund.builder()
+                .order(orders)
+                .reason(dto.getReason())
+                .build();
+        ordersRefundRepository.save(ordersRefund);
+        ordersRepository.save(orders);
     }
 }
