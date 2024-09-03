@@ -8,6 +8,7 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.daewon.xeno_backend.domain.*;
 import com.daewon.xeno_backend.domain.auth.Users;
 import com.daewon.xeno_backend.dto.UploadImageReadDTO;
+import com.daewon.xeno_backend.dto.order.OrderProductDTO;
 import com.daewon.xeno_backend.dto.page.PageInfinityResponseDTO;
 import com.daewon.xeno_backend.dto.page.PageRequestDTO;
 import com.daewon.xeno_backend.dto.page.PageResponseDTO;
@@ -75,6 +76,18 @@ public class ProductServiceImpl implements ProductService {
     private String bucketName;
 
     private final AmazonS3 s3Client;
+
+    public List<ProductsOption> productOptionIdsRead(List<Long> productOptionIds) {
+        List<ProductsOption> productOptions = new ArrayList<>();
+
+        for(Long productOptionId : productOptionIds) {
+            ProductsOption productsOption = productsOptionRepository.findByProductOptionId(productOptionId);
+
+            productOptions.add(productsOption);
+        }
+
+        return productOptions;
+    }
 
     public static String calculateFileHash(InputStream inputStream) throws Exception {
         try {

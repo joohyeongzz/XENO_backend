@@ -1,6 +1,8 @@
 package com.daewon.xeno_backend.controller;
 
+import com.daewon.xeno_backend.domain.ProductsOption;
 import com.daewon.xeno_backend.dto.UploadImageReadDTO;
+import com.daewon.xeno_backend.dto.order.OrderProductDTO;
 import com.daewon.xeno_backend.dto.page.PageInfinityResponseDTO;
 import com.daewon.xeno_backend.dto.page.PageRequestDTO;
 import com.daewon.xeno_backend.dto.page.PageResponseDTO;
@@ -33,6 +35,19 @@ public class ProductController {
 
     private final ProductService productService;
     private final ExcelService excelService;
+
+    @GetMapping("/option/ids/read")
+    public ResponseEntity<?> productOptionIdsRead(@RequestParam List<Long> productOptionIds) {
+        List<ProductsOption> products = productService.productOptionIdsRead(productOptionIds);
+
+        log.info("products |||||||||||||||||||||||||||||" + products);
+
+        try {
+            return ResponseEntity.ok(products);
+        } catch (Exception e) {
+            return ResponseEntity.status(404).body("유효하지 않은 상품입니다.");
+        }
+    }
 
     @GetMapping("/read")
     public ResponseEntity<ProductInfoDTO> readProduct(@RequestParam("productId") Long productId) throws IOException {

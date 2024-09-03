@@ -4,7 +4,9 @@ package com.daewon.xeno_backend.service;
 
 import com.daewon.xeno_backend.domain.Products;
 
+import com.daewon.xeno_backend.domain.ProductsOption;
 import com.daewon.xeno_backend.dto.UploadImageReadDTO;
+import com.daewon.xeno_backend.dto.order.OrderProductDTO;
 import com.daewon.xeno_backend.dto.page.PageInfinityResponseDTO;
 import com.daewon.xeno_backend.dto.page.PageRequestDTO;
 import com.daewon.xeno_backend.dto.page.PageResponseDTO;
@@ -18,6 +20,7 @@ import java.util.List;
 public interface ProductService {
 
 
+    List<ProductsOption> productOptionIdsRead(List<Long> productOptionIds);
 //    String asd(MultipartFile file);
 
     void uploadImages(String productNumber, List<MultipartFile> productImages ,MultipartFile productDetailImage);
