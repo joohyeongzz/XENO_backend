@@ -2,10 +2,7 @@ package com.daewon.xeno_backend.controller;
 
 import com.daewon.xeno_backend.domain.auth.Level;
 import com.daewon.xeno_backend.domain.auth.UserRole;
-import com.daewon.xeno_backend.dto.manager.BrandListDTO;
-import com.daewon.xeno_backend.dto.manager.LevelUpdateDTO;
-import com.daewon.xeno_backend.dto.manager.PointUpdateDTO;
-import com.daewon.xeno_backend.dto.manager.UserListDTO;
+import com.daewon.xeno_backend.dto.manager.*;
 import com.daewon.xeno_backend.exception.*;
 import com.daewon.xeno_backend.service.AuthService;
 import com.daewon.xeno_backend.service.ManagerService;
@@ -48,6 +45,13 @@ public class ManagerController {
     @GetMapping("/brand")
     public ResponseEntity<List<BrandListDTO>> getAllBrands() {
         return ResponseEntity.ok(managerService.getAllBrands());
+    }
+
+    // product List 불러오는 메서드
+    @PreAuthorize("hasRole('MANAGER')")
+    @GetMapping("/brand/products")
+    public ResponseEntity<List<ProductListDTO>> getAllProducts() {
+        return ResponseEntity.ok(managerService.getAllProducts());
     }
 
     // user 강제 탈퇴 메서드
@@ -124,6 +128,7 @@ public class ManagerController {
         }
     }
 
+    // 특정 유저의 적립금 수정 메서드
     @PreAuthorize("hasRole('MANAGER')")
     @PutMapping("/point/{targetUserId}")
     public ResponseEntity<Map<String, Object>> updateUserPoint(Authentication authentication,
@@ -171,6 +176,7 @@ public class ManagerController {
         }
     }
 
+    // 특정 유저의 등급 수정 메서드
     @PreAuthorize("hasRole('MANAGER')")
     @PutMapping("/level/{targetUserId}")
     public ResponseEntity<Map<String, String>> updateUserLevel(
@@ -219,6 +225,7 @@ public class ManagerController {
         }
     }
 
+    // 특정 판매사 강제 탈퇴 메서드
     @PreAuthorize("hasRole('MANAGER')")
     @DeleteMapping("/brand/{targetBrandId}")
     public ResponseEntity<Map<String, Object>> deleteBrand(Authentication authentication,

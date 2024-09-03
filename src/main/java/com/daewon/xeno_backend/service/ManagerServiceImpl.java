@@ -2,10 +2,7 @@ package com.daewon.xeno_backend.service;
 
 import com.daewon.xeno_backend.domain.Products;
 import com.daewon.xeno_backend.domain.auth.*;
-import com.daewon.xeno_backend.dto.manager.BrandListDTO;
-import com.daewon.xeno_backend.dto.manager.PointUpdateDTO;
-import com.daewon.xeno_backend.dto.manager.UserInfoDTO;
-import com.daewon.xeno_backend.dto.manager.UserListDTO;
+import com.daewon.xeno_backend.dto.manager.*;
 import com.daewon.xeno_backend.exception.BrandNotFoundException;
 import com.daewon.xeno_backend.exception.ProductNotFoundException;
 import com.daewon.xeno_backend.exception.UnauthorizedException;
@@ -206,6 +203,26 @@ public class ManagerServiceImpl implements ManagerService {
             brandListDTO.setUsers(userInfo);
 
             return brandListDTO;
+        }).collect(Collectors.toList());
+    }
+
+    // product list를 불러오는 메서드
+    @Override
+    public List<ProductListDTO> getAllProducts() {
+        List<Products> product = productsRepository.findAll();
+
+        return product.stream().map(products -> {
+            ProductListDTO productListDTO = new ProductListDTO();
+            productListDTO.setProductId(products.getProductId());
+            productListDTO.setBrandName(products.getBrandName());
+            productListDTO.setName(products.getName());
+            productListDTO.setCategory(products.getCategory());
+            productListDTO.setPrice(products.getPrice());
+            productListDTO.setPriceSale(products.getPriceSale());
+            productListDTO.setProductNumber(products.getProductNumber());
+            productListDTO.setColor(products.getColor());
+
+            return productListDTO;
         }).collect(Collectors.toList());
     }
 

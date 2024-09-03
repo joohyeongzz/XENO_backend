@@ -4,6 +4,7 @@ import com.daewon.xeno_backend.domain.auth.Level;
 import com.daewon.xeno_backend.domain.auth.UserRole;
 import com.daewon.xeno_backend.dto.manager.BrandListDTO;
 import com.daewon.xeno_backend.dto.manager.PointUpdateDTO;
+import com.daewon.xeno_backend.dto.manager.ProductListDTO;
 import com.daewon.xeno_backend.dto.manager.UserListDTO;
 import com.daewon.xeno_backend.exception.UnauthorizedException;
 import com.daewon.xeno_backend.exception.UserNotFoundException;
@@ -36,4 +37,7 @@ public interface ManagerService {
 
     // brand list 불러오기
     List<BrandListDTO> getAllBrands();
+
+    // product list 불러오기
+    List<ProductListDTO> getAllProducts();
 }
