@@ -38,6 +38,6 @@ public interface ManagerService {
     // product list 불러오기
     List<ProductListDTO> getAllProducts();
 
-    // brand에 종속된 user list 불러오기
-    List<BrandDependUserListDTO> getAllDependUsers();
+//    // brand에 종속된 user list 불러오기
+//    List<BrandDependUserListDTO> getAllDependUsers();
 }

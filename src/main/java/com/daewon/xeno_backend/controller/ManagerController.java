@@ -271,6 +271,52 @@ public class ManagerController {
         }
     }
 
+    // 특정 판매사 유저 강제 탈퇴 메서드
+    // user 강제 탈퇴 메서드
+    @PreAuthorize("hasRole('MANAGER')")
+    @DeleteMapping("/brand/users/{targetUserId}")
+    public ResponseEntity<?> deleteBrandDependsUser(Authentication authentication, @RequestHeader("Authorization") String token,
+                                        @PathVariable Long targetUserId) {
+
+        // token의 claim값에서 email값을 추출 후 문제 없으면 정상적으로 {targetUserId}값이 삭제 됨.
+        try {
+            String currentToken = token.replace("Bearer ", "");
+            Map<String, Object> claims = jwtUtil.validateToken(currentToken);
+            String managerEmail = claims.get("email").toString();
+            log.info("managerEmail: " + managerEmail);
+
+            String deletedUserEmail = managerService.deleteUserByManager(managerEmail, targetUserId);
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "해당 user의 탈퇴가 완료되었습니다.");
+            response.put("deletedUserEmail", deletedUserEmail);
+
+            log.info("delete중인 manager의 email은? : " + deletedUserEmail);
+
+            return ResponseEntity.ok(response);
+        } catch (JwtException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "token이 유효하지 않거나 만료됨");
+
+            return ResponseEntity.status(401).body(errorResponse);
+        } catch (UserNotFoundException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+
+            return ResponseEntity.status(404).body(errorResponse);
+        } catch (UnauthorizedException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+
+            return ResponseEntity.status(403).body(errorResponse);
+        } catch (Exception e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "사용자를 삭제하는 도중 오류가 발생 : " + e.getMessage());
+
+            return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
+
     // product 강제 삭제 메서드
 //    @PreAuthorize("hasRole('MANAGER')")
     @DeleteMapping("/brand/products/{targetProductId}")

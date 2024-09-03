@@ -198,7 +198,7 @@ public class ManagerServiceImpl implements ManagerService {
 
             List<UserInfoDTO> userInfo = userRepository.findAllByBrand(brand)
                     .stream()
-                    .map(user -> new UserInfoDTO(user.getUserId(), user.getEmail(), user.getName()))
+                    .map(user -> new UserInfoDTO(user.getUserId(), user.getEmail(), user.getName(), user.getBrand().getBrandId()))
                     .collect(Collectors.toList());
             brandListDTO.setUsers(userInfo);
 
@@ -246,6 +246,11 @@ public class ManagerServiceImpl implements ManagerService {
     // userData를 삭제하는 메서드
     // 해당하는 user, customer값을 삭제함
     private void deleteUserData(Users user) {
+        if (user.getBrand() != null) {
+            user.setBrand(null);
+            userRepository.save(user);
+        }
+
         if (user.getCustomer() != null) {
             customerRepository.delete(user.getCustomer());
         }
