@@ -272,8 +272,8 @@ public class ManagerController {
     }
 
     // product 강제 삭제 메서드
-    @PreAuthorize("hasRole('MANAGER')")
-    @DeleteMapping("/brand/product/{targetProductId}")
+//    @PreAuthorize("hasRole('MANAGER')")
+    @DeleteMapping("/brand/products/{targetProductId}")
     public ResponseEntity<?> deleteProductByManager(Authentication authentication, @PathVariable Long targetProductId) {
         String managerEmail = authentication.getName();
         log.info("제품 강제 삭제 요청 받음. 관리자: {}, 대상 제품 ID: {}", managerEmail, targetProductId);
@@ -291,7 +291,7 @@ public class ManagerController {
             log.info ("제품 삭제 successful. 관리자: {}, 제품 ID: {}", managerEmail, targetProductId);
 
             Map<String, String> response = new HashMap<>();
-            response.put("message", "관리자 회원가입 완료");
+            response.put("message", "제품 삭제 완료");
             response.put("deleteProduct", deleteProduct);
 
             return ResponseEntity.ok(response);
