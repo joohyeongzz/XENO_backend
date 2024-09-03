@@ -76,20 +76,24 @@ public class OrdersServiceImpl implements OrdersService {
 
         List<Orders> savedOrders = new ArrayList<>();
 
+
         for(OrdersDTO dto : ordersDTO) {
             ProductsSeller seller = productsSellerRepository.findByProducts(findProductOption(dto.getProductOptionId()).getProducts());
-            Orders orders  = Orders.builder()
-                .orderPayId(orderPayId)
-                .orderNumber(orderNumber)
-                .productsOption(findProductOption(dto.getProductOptionId()))
-                .customer(users)
-                .seller(seller.getUsers())
-                .status("결제 완료")
-                .req(dto.getReq())
-                .quantity(dto.getQuantity())
-                .amount(dto.getAmount())
-                .build();
-            savedOrders.add(ordersRepository.save(orders));
+            if(seller != null) {
+                Orders orders = Orders.builder()
+                        .orderPayId(orderPayId)
+                        .orderNumber(orderNumber)
+                        .productsOption(findProductOption(dto.getProductOptionId()))
+                        .customer(users)
+                        .seller(seller.getUsers().getBrand())
+                        .status("결제 완료")
+                        .paymentKey(dto.getPaymentKey())
+                        .req(dto.getReq())
+                        .quantity(dto.getQuantity())
+                        .amount(dto.getAmount())
+                        .build();
+                savedOrders.add(ordersRepository.save(orders));
+            }
         }
 
         // 저장된 주문들을 DTO로 변환하여 반환
@@ -289,7 +293,8 @@ public class OrdersServiceImpl implements OrdersService {
                 order.getReq(),
                 order.getQuantity(),
                 order.getAmount(),
-                order.getUsePoint()
+                order.getUsePoint(),
+                order.getPaymentKey()
         );
     }
 

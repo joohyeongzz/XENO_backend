@@ -21,6 +21,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -86,20 +87,21 @@ public class OrdersController {
         try {
             String userEmail = userDetails.getUsername();
 
-            Customer customer = customerRepository.findByUserId(userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new UserNotFoundException("User not found")).getUserId())
-                .orElseThrow(() -> new UserNotFoundException("Customer not found"));
+//            Customer customer = customerRepository.findByUserId(userRepository.findByEmail(userEmail)
+//                .orElseThrow(() -> new UserNotFoundException("User not found")).getUserId())
+//                .orElseThrow(() -> new UserNotFoundException("Customer not found"));
+//
+//            int usedPoint = ordersDTO.stream().mapToInt(OrdersDTO::getUsedPoint).sum();
+//            if (usedPoint > customer.getPoint()) {
+//                return ResponseEntity.status(400).body("사용 가능한 적립금이 부족합니다.");
+//            }
+//            customer.setPoint(customer.getPoint() - usedPoint);
+//            customerRepository.save(customer);
+//
+//            // 상품 가격에서 사용한 적립금만큼 차감
+//            ordersDTO.forEach(dto -> dto.setAmount(dto.getAmount() - dto.getUsedPoint()));
 
-            int usedPoint = ordersDTO.stream().mapToInt(OrdersDTO::getUsedPoint).sum();
-            if (usedPoint > customer.getPoint()) {
-                return ResponseEntity.status(400).body("사용 가능한 적립금이 부족합니다.");
-            }
-            customer.setPoint(customer.getPoint() - usedPoint);
-            customerRepository.save(customer);
-
-            // 상품 가격에서 사용한 적립금만큼 차감
-            ordersDTO.forEach(dto -> dto.setAmount(dto.getAmount() - dto.getUsedPoint()));
-
+            log.info(ordersDTO);
             List<OrdersDTO> createdOrder = ordersService.createOrders(ordersDTO, userEmail);
             return ResponseEntity.ok(createdOrder);
         } catch (Exception e) {
