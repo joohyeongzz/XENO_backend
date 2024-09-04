@@ -2,17 +2,21 @@ package com.daewon.xeno_backend.service;
 
 import com.daewon.xeno_backend.domain.Products;
 import com.daewon.xeno_backend.domain.auth.*;
+import com.daewon.xeno_backend.dto.auth.BrandApprovalDTO;
+import com.daewon.xeno_backend.dto.auth.BrandDTO;
 import com.daewon.xeno_backend.dto.manager.*;
 import com.daewon.xeno_backend.exception.BrandNotFoundException;
 import com.daewon.xeno_backend.exception.ProductNotFoundException;
 import com.daewon.xeno_backend.exception.UnauthorizedException;
 import com.daewon.xeno_backend.exception.UserNotFoundException;
 import com.daewon.xeno_backend.repository.Products.*;
+import com.daewon.xeno_backend.repository.auth.BrandApprovalRepository;
 import com.daewon.xeno_backend.repository.auth.BrandRepository;
 import com.daewon.xeno_backend.repository.auth.CustomerRepository;
 import com.daewon.xeno_backend.repository.auth.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
@@ -28,6 +32,7 @@ public class ManagerServiceImpl implements ManagerService {
     private final UserRepository userRepository;
     private final CustomerRepository customerRepository;
     private final BrandRepository brandRepository;
+    private final BrandApprovalRepository brandApprovalRepository;
     private final ProductsOptionRepository productsOptionRepository;
     private final ProductsImageRepository productsImageRepository;
     private final ProductsStarRepository productsStarRepository;
@@ -206,6 +211,25 @@ public class ManagerServiceImpl implements ManagerService {
         }).collect(Collectors.toList());
     }
 
+    @Override
+    public List<BrandApproveListDTO> getAllBrandApprovers() {
+        List<BrandApproval> brandApprovals = brandApprovalRepository.findAll();
+
+        return brandApprovals.stream().map(approval -> {
+            BrandApproveListDTO brandApproveListDTO = new BrandApproveListDTO();
+            brandApproveListDTO.setId(approval.getId());
+            brandApproveListDTO.setBrandName(approval.getBrandName());
+            brandApproveListDTO.setCompanyId(approval.getCompanyId());
+            brandApproveListDTO.setEmail(approval.getEmail());
+            brandApproveListDTO.setName(approval.getName());
+            brandApproveListDTO.setPhoneNumber(approval.getPhoneNumber());
+            brandApproveListDTO.setAddress(approval.getAddress());
+            brandApproveListDTO.setStatus(approval.getStatus());
+
+            return brandApproveListDTO;
+        }).collect(Collectors.toList());
+    }
+
     // product list를 불러오는 메서드
     @Override
     public List<ProductListDTO> getAllProducts() {
@@ -225,6 +249,29 @@ public class ManagerServiceImpl implements ManagerService {
             return productListDTO;
         }).collect(Collectors.toList());
     }
+
+//    // 판매사 회원가입시 승인대기 상태로 돌리는 메서드
+//    @Override
+//    public BrandApprovalDTO requestBrandSignup(BrandDTO brandDTO) {
+//        BrandApproval brandApproval = BrandApproval.builder()
+//                .brandName(brandDTO.getBrandName())
+//                .companyId(brandDTO.getCompanyId())
+//                .email(brandDTO.getEmail())
+//                .password(passwordEncoder.encode(brandDTO.getPassword()))
+//                .name(brandDTO.getName())
+//                .address(brandDTO.getAddress())
+//                .phoneNumber(brandDTO.getPhoneNumber())
+//                .status("승인 대기")
+//                .build();
+//        brandApproval.addRole(UserRole.SELLER);
+//
+//        try {
+//            BrandApproval savedBrandApproval = brandApprovalRepository.save(brandApproval);
+//            return new BrandApprovalDTO(savedBrandApproval.getId(), savedBrandApproval.getEmail(), savedBrandApproval.getBrandName(), "승인 대기");
+//        } catch (DataIntegrityViolationException e) {
+//            throw new IllegalArgumentException("이 이름 또는 이메일을 사용하는 브랜드는 이미 승인 대기 중입니다.", e);
+//        }
+//    }
 
     // Manager인지 검증하는 메서드
     private Users validateManager(String managerEmail) throws UserNotFoundException, UnauthorizedException {

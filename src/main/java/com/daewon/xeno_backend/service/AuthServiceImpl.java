@@ -5,19 +5,18 @@ import com.daewon.xeno_backend.domain.Review;
 import com.daewon.xeno_backend.domain.auth.*;
 import com.daewon.xeno_backend.dto.auth.*;
 import com.daewon.xeno_backend.dto.user.UserUpdateDTO;
+import com.daewon.xeno_backend.exception.UnauthorizedException;
 import com.daewon.xeno_backend.exception.UserNotFoundException;
 import com.daewon.xeno_backend.repository.Products.*;
 import com.daewon.xeno_backend.repository.RefreshTokenRepository;
 import com.daewon.xeno_backend.repository.ReplyRepository;
 import com.daewon.xeno_backend.repository.ReviewRepository;
-import com.daewon.xeno_backend.repository.auth.BrandRepository;
-import com.daewon.xeno_backend.repository.auth.CustomerRepository;
-import com.daewon.xeno_backend.repository.auth.ManagerRepository;
-import com.daewon.xeno_backend.repository.auth.UserRepository;
+import com.daewon.xeno_backend.repository.auth.*;
 import com.daewon.xeno_backend.utils.JWTUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.math3.stat.descriptive.summary.Product;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -44,9 +43,13 @@ public class AuthServiceImpl implements AuthService {
     private final ProductsImageRepository productsImageRepository;
     private final ProductsStarRepository productsStarRepository;
     private final ProductsLikeRepository productsLikeRepository;
+
     private final ProductsBrandRepository productsBrandRepository;
     private final ReviewRepository reviewRepository;
     private final ReplyRepository replyRepository;
+
+    private final BrandApprovalRepository brandApprovalRepository;
+
 
     @Override
     @Transactional
@@ -81,36 +84,114 @@ public class AuthServiceImpl implements AuthService {
         return user;
     }
 
-    // 판매사 회원가입
+    // 판매사 회원가입시 승인대기 상태로 돌리는 메서드
     @Override
-    public UserSignupDTO signupBrand(BrandDTO dto) {
-        Brand brand = brandRepository.findByBrandName(dto.getBrandName())
-                .orElseGet(() -> {
-                    if (dto.getCompanyId() == null) {
-                        throw new IllegalArgumentException("New brand requires a company ID");
-                    }
-                    Brand newBrand = Brand.builder()
-                            .brandName(dto.getBrandName())
-                            .companyId(dto.getCompanyId())
-                            .build();
-                    newBrand.addRole(UserRole.SELLER);
-                    return brandRepository.save(newBrand);
-                });
+    public BrandApprovalDTO requestBrandSignup(BrandDTO brandDTO) {
+        BrandApproval brandApproval = BrandApproval.builder()
+                .brandName(brandDTO.getBrandName())
+                .companyId(brandDTO.getCompanyId())
+                .email(brandDTO.getEmail())
+                .password(passwordEncoder.encode(brandDTO.getPassword()))
+                .name(brandDTO.getName())
+                .address(brandDTO.getAddress())
+                .phoneNumber(brandDTO.getPhoneNumber())
+                .status("승인 대기")
+                .build();
+        brandApproval.addRole(UserRole.SELLER);
 
+        try {
+            BrandApproval savedBrandApproval = brandApprovalRepository.save(brandApproval);
+            return new BrandApprovalDTO(savedBrandApproval.getId(), savedBrandApproval.getEmail(), savedBrandApproval.getBrandName(), "승인 대기");
+        } catch (DataIntegrityViolationException e) {
+            throw new IllegalArgumentException("이 이름 또는 이메일을 사용하는 브랜드는 이미 승인 대기 중입니다.", e);
+        }
+    }
+
+    @Override
+    public UserSignupDTO signupBrand(String managerEmail, Long approvalId) {
+        // 매니저 검증
+        Users manager = userRepository.findByEmail(managerEmail)
+                .orElseThrow(() -> new UserNotFoundException("매니저를 찾을 수 없습니다."));
+
+        if (!manager.getRoleSet().contains(UserRole.MANAGER)) {
+            throw new UnauthorizedException("브랜드 승인 권한이 없습니다.");
+        }
+
+
+        BrandApproval brandApproval = brandApprovalRepository.findById(approvalId)
+                .orElseThrow(() -> new IllegalArgumentException("승인이 완료되지 않았습니다."));
+
+        if (!"승인 대기".equals(brandApproval.getStatus())) {
+            throw new IllegalStateException("승인 대기 상태입니다.");
+        }
+
+        // Brand 생성 및 저장
+        Brand brand = Brand.builder()
+                .brandName(brandApproval.getBrandName())
+                .companyId(brandApproval.getCompanyId())
+                .build();
+        brand.addRole(UserRole.SELLER);
+        Brand savedBrand = brandRepository.save(brand);
+
+        // User 생성 및 저장
         Users user = Users.builder()
-                .email(dto.getEmail())
-                .password(passwordEncoder.encode(dto.getPassword()))
-                .name(dto.getName())
-                .address(dto.getAddress())
-                .phoneNumber(dto.getPhoneNumber())
-                .brand(brand)
+                .email(brandApproval.getEmail())
+                .password(brandApproval.getPassword())
+                .name(brandApproval.getName())
+                .address(brandApproval.getAddress())
+                .phoneNumber(brandApproval.getPhoneNumber())
+                .brand(savedBrand)
                 .build();
         user.addRole(UserRole.SELLER);
-
         Users savedUser = userRepository.save(user);
 
-        return convertToDTO(savedUser);
+        brandApproval.setStatus("승인 완료");
+        brandApprovalRepository.save(brandApproval);
+
+        return UserSignupDTO.builder()
+                .userId(savedUser.getUserId())
+                .email(savedUser.getEmail())
+                .password(savedUser.getPassword())
+                .name(savedUser.getName())
+                .address(savedUser.getAddress())
+                .phoneNumber(savedUser.getPhoneNumber())
+                .brand(BrandSignupDTO.builder()
+                        .brandName(savedBrand.getBrandName())
+                        .companyId(savedBrand.getCompanyId())
+                        .build())
+                .build();
     }
+
+    //    // 판매사 회원가입
+//    @Override
+//    public UserSignupDTO signupBrand(BrandDTO dto) {
+//        Brand brand = brandRepository.findByBrandName(dto.getBrandName())
+//                .orElseGet(() -> {
+//                    if (dto.getCompanyId() == null) {
+//                        throw new IllegalArgumentException("New brand requires a company ID");
+//                    }
+//                    Brand newBrand = Brand.builder()
+//                            .brandName(dto.getBrandName())
+//                            .companyId(dto.getCompanyId())
+//                            .build();
+//                    newBrand.addRole(UserRole.SELLER);
+//                    return brandRepository.save(newBrand);
+//                });
+//
+//        Users user = Users.builder()
+//                .email(dto.getEmail())
+//                .password(passwordEncoder.encode(dto.getPassword()))
+//                .name(dto.getName())
+//                .address(dto.getAddress())
+//                .phoneNumber(dto.getPhoneNumber())
+//                .brand(brand)
+//                .build();
+//        user.addRole(UserRole.SELLER);
+//
+//        Users savedUser = userRepository.save(user);
+//
+//        return convertToDTO(savedUser);
+//    }
 
     // 관리자 회원가입
     @Override

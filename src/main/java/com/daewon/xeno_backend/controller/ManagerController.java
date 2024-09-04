@@ -2,6 +2,7 @@ package com.daewon.xeno_backend.controller;
 
 import com.daewon.xeno_backend.domain.auth.Level;
 import com.daewon.xeno_backend.domain.auth.UserRole;
+import com.daewon.xeno_backend.dto.auth.UserSignupDTO;
 import com.daewon.xeno_backend.dto.manager.*;
 import com.daewon.xeno_backend.exception.*;
 import com.daewon.xeno_backend.service.AuthService;
@@ -30,6 +31,7 @@ public class ManagerController {
 
     private final AuthService authService;
     private final ManagerService managerService;
+
     private final JWTUtil jwtUtil;
     private final TransactionTemplate transactionTemplate;
 
@@ -45,6 +47,13 @@ public class ManagerController {
     @GetMapping("/brand")
     public ResponseEntity<List<BrandListDTO>> getAllBrands() {
         return ResponseEntity.ok(managerService.getAllBrands());
+    }
+
+    // brand 승인 대기중인 List 불러오는 메서드
+    @PreAuthorize("hasRole('MANAGER')")
+    @GetMapping("/brand/approve")
+    public ResponseEntity<List<BrandApproveListDTO>> getAllBrandApproves() {
+        return ResponseEntity.ok(managerService.getAllBrandApprovers());
     }
 
     // product List 불러오는 메서드
@@ -370,5 +379,47 @@ public class ManagerController {
 
             return ResponseEntity.status(500).body(errorReponse + e.getMessage());
         }
+    }
+
+    @PostMapping("/brand/approve/{approvalId}")
+    public ResponseEntity<?> approvalBrandSignup(Authentication authentication,
+                                                 @RequestHeader("Authorization") String token,@PathVariable Long approvalId) {
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            String currentToken = token.replace("Bearer ", "");
+            Map<String, Object> claims = jwtUtil.validateToken(currentToken);
+            String managerEmail = claims.get("email").toString();
+
+            UserSignupDTO approvedBrand = authService.signupBrand(managerEmail, approvalId);
+
+            response.put("status", "success");
+            response.put("message", "브랜드 가입이 승인되었습니다.");
+            response.put("approvedBrand", approvedBrand);
+
+            return ResponseEntity.ok(response);
+        } catch (JwtException e) {
+            log.error("JWT 토큰 처리 중 오류 발생", e);
+            response.put("status", "error");
+            response.put("message", "토큰이 만료됐거나 유효하지 않음");
+            return ResponseEntity.status(401).body(response);
+        } catch (UserNotFoundException | BrandNotFoundException e) {
+            log.warn("승인 대상을 찾을 수 없음: {}", e.getMessage());
+            response.put("status", "error");
+            response.put("message", e.getMessage());
+            return ResponseEntity.status(404).body(response);
+        } catch (UnauthorizedException e) {
+            log.warn("권한 없는 작업 시도: {}", e.getMessage());
+            response.put("status", "error");
+            response.put("message", e.getMessage());
+            return ResponseEntity.status(403).body(response);
+        } catch (Exception e) {
+            log.error("브랜드 가입 승인 중 오류 발생", e);
+            response.put("status", "error");
+            response.put("message", "브랜드 가입 승인 중 예기치 않은 오류가 발생했습니다: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
+
     }
 }
