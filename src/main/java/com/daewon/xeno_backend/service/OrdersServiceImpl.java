@@ -193,11 +193,9 @@ public class OrdersServiceImpl implements OrdersService {
 
     // 주문번호 orderNumber 랜덤생성
     private Long generateOrderNumber() {
-        long timestamp = System.currentTimeMillis();
         long random = new Random().nextInt(1000000); // 6자리 랜덤 숫자
 
-        // timestamp를 왼쪽으로 20비트 시프트하고 랜덤 값을 더함
-        return (timestamp << 20) | random;
+        return random;
     }
 
     // 영문 대소문자, 숫자, 특수문자 -, _, =로 이루어진 6자 이상 64자 이하의 문자열 이어야함.
