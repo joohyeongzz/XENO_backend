@@ -1,15 +1,13 @@
 
 package com.daewon.xeno_backend.controller;
 
-import com.daewon.xeno_backend.dto.auth.SellerInfoCardDTO;
-import com.daewon.xeno_backend.exception.UserNotFoundException;
+import com.daewon.xeno_backend.dto.auth.BrandInfoCardDTO;
 import com.daewon.xeno_backend.security.UsersDetailsService;
 import com.daewon.xeno_backend.service.AuthService;
 import com.daewon.xeno_backend.utils.JWTUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -24,11 +22,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Log4j2
-@RequestMapping("/api/seller")
+@RequestMapping("/api/brand")
 @RequiredArgsConstructor
 @RestController
 @EnableWebSecurity
-public class SellerController {
+public class BrandController {
 
     private final JWTUtil jwtUtil;
     private final AuthService authService;
@@ -77,12 +75,9 @@ public class SellerController {
     }
 
     @GetMapping("/read")
-    public ResponseEntity<?> readSellerInfo(@AuthenticationPrincipal UserDetails userDetails) {
-
-        SellerInfoCardDTO dto = authService.readSellerInfo(userDetails);
+    public ResponseEntity<?> readBrandInfo(@AuthenticationPrincipal UserDetails userDetails) {
+        BrandInfoCardDTO dto = authService.readBrandInfo(userDetails);
         return ResponseEntity.ok(dto);
-
-
     }
 
 }

@@ -19,7 +19,7 @@ public class BrandService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public Users registerSellerUser(SellerDTO dto) {
+    public Users registerBrandUser(BrandDTO dto) {
         // Users 객체 생성
         Users user = Users.builder()
                 .email(dto.getEmail())

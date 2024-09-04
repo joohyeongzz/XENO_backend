@@ -32,7 +32,7 @@ public class ManagerServiceImpl implements ManagerService {
     private final ProductsImageRepository productsImageRepository;
     private final ProductsStarRepository productsStarRepository;
     private final ProductsLikeRepository productsLikeRepository;
-    private final ProductsSellerRepository productsSellerRepository;
+    private final ProductsBrandRepository productsBrandRepository;
     private final ProductsRepository productsRepository;
 
     @Transactional
@@ -278,7 +278,7 @@ public class ManagerServiceImpl implements ManagerService {
         productsImageRepository.deleteByProducts(product);
         productsStarRepository.deleteByProducts(product);
         productsLikeRepository.deleteByProducts(product);
-        productsSellerRepository.deleteByProducts(product);
+        productsBrandRepository.deleteByProducts(product);
 
         productsRepository.delete(product);
 

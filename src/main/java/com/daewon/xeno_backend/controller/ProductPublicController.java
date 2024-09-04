@@ -121,13 +121,13 @@ public class ProductPublicController {
     }
 
 
-    @GetMapping("/seller/read")
-    public ResponseEntity<?> getProductListBySeller(@AuthenticationPrincipal UserDetails userDetails) {
+    @GetMapping("/brand/read")
+    public ResponseEntity<?> getProductListByBrand(@AuthenticationPrincipal UserDetails userDetails) {
         try {
             String userEmail = userDetails.getUsername();
 
             log.info("orderUserEmail : " + userEmail);
-            List<ProductListBySellerDTO> dtoList = productService.getProductListBySeller(userEmail);
+            List<ProductListByBrandDTO> dtoList = productService.getProductListByBrand(userEmail);
 
             return ResponseEntity.ok(dtoList);
         } catch (Exception e) {

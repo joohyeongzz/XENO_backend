@@ -25,7 +25,7 @@ public interface ProductService {
     void updateProductImages(String productNumber, List<MultipartFile> productImages ,MultipartFile productDetailImage) throws Exception;
 
     ProductInfoDTO getProductInfo(Long productId) throws IOException;
-
+    ProductInfoDTO  getProductInfoByBrand(Long productId) throws IOException;
     ProductColorInfoCardDTO getProductCardInfo(Long productId);
 
     ProductDetailImagesDTO getProductDetailImages(Long productId, int page, int size);
@@ -41,7 +41,7 @@ public interface ProductService {
     PageInfinityResponseDTO<ProductsStarRankListDTO> getrankTop50(String category, PageRequestDTO pageRequestDTO);
 
 
-    List<ProductListBySellerDTO> getProductListBySeller(String email);
+    List<ProductListByBrandDTO> getProductListByBrand(String email);
 
 //    PageResponseDTO<ProductsSearchDTO> productCategorySearch(String category, PageRequestDTO pageRequestDTO);
 

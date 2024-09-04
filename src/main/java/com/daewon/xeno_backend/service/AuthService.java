@@ -22,7 +22,7 @@ public interface AuthService {
 
     Users signin(final String email, final String password);
 
-    SellerInfoCardDTO readSellerInfo(UserDetails userDetails);
+    BrandInfoCardDTO readBrandInfo(UserDetails userDetails);
 
     UserSignupDTO signupBrand(BrandDTO dto);
 

@@ -11,7 +11,7 @@ import com.daewon.xeno_backend.repository.OrdersRefundRepository;
 import com.daewon.xeno_backend.repository.OrdersRepository;
 import com.daewon.xeno_backend.repository.Products.ProductsImageRepository;
 import com.daewon.xeno_backend.repository.Products.ProductsOptionRepository;
-import com.daewon.xeno_backend.repository.Products.ProductsSellerRepository;
+import com.daewon.xeno_backend.repository.Products.ProductsBrandRepository;
 import com.daewon.xeno_backend.repository.auth.UserRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -50,7 +50,7 @@ public class ExcelService {
 
     private final ProductsImageRepository productsImageRepository;
     private final ProductsOptionRepository productsOptionRepository;
-    private final ProductsSellerRepository productsSellerRepository;
+    private final ProductsBrandRepository productsBrandRepository;
     private final UserRepository userRepository;
     private final OrdersRepository ordersRepository;
     private final RestTemplate restTemplate = new RestTemplate();
@@ -171,7 +171,7 @@ public class ExcelService {
 
         Users users = optionalUser.get();
 
-        List<ProductsSeller> products = productsSellerRepository.findByUsers(users);
+        List<ProductsBrand> products = productsBrandRepository.findByBrand(users.getBrand());
 
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Sheet1");
@@ -217,7 +217,7 @@ public class ExcelService {
         sheet.addValidationData(categoryValidation);
 
         int rowIndex = 1;
-        for (ProductsSeller product : products) {
+        for (ProductsBrand product : products) {
             Row row = sheet.createRow(rowIndex++);
             row.createCell(0).setCellValue(product.getProducts().getProductNumber());
             row.createCell(1).setCellValue(product.getProducts().getName());
@@ -273,7 +273,7 @@ public class ExcelService {
 
         Users users = optionalUser.get();
 
-        List<ProductsSeller> products = productsSellerRepository.findByUsers(users);
+        List<ProductsBrand> products = productsBrandRepository.findByBrand(users.getBrand());
 
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Sheet1");
@@ -328,7 +328,7 @@ public class ExcelService {
 
         Users users = optionalUser.get();
 
-        List<ProductsSeller> products = productsSellerRepository.findByUsers(users);
+        List<ProductsBrand> products = productsBrandRepository.findByBrand(users.getBrand());
 
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Sheet1");
@@ -351,7 +351,7 @@ public class ExcelService {
         }
 
         int rowIndex = 1;
-        for (ProductsSeller product : products) {
+        for (ProductsBrand product : products) {
             List<ProductsOption> productsOptions = productsOptionRepository.findByProductId(product.getProducts().getProductId());
             for (ProductsOption productsOption : productsOptions) {
                 Row row = sheet.createRow(rowIndex++);
@@ -518,10 +518,10 @@ public class ExcelService {
 
         int rowIndex = 1;
 
-        List<ProductsSeller> products = productsSellerRepository.findByUsers(users);
+        List<ProductsBrand> products = productsBrandRepository.findByBrand(users.getBrand());
         log.info(products);
-        for(ProductsSeller productsSeller : products) {
-            List<ProductsOption> productsOptions = productsOptionRepository.findByProductId(productsSeller.getProducts().getProductId());
+        for(ProductsBrand productsBrand : products) {
+            List<ProductsOption> productsOptions = productsOptionRepository.findByProductId(productsBrand.getProducts().getProductId());
             log.info(productsOptions);
             for(ProductsOption productsOption : productsOptions) {
                 List<Orders> ordersList = ordersRepository.findByStatusAndProductsOption("결제 완료",productsOption);
@@ -704,7 +704,7 @@ public class ExcelService {
 
         LocalDateTime startDateTime = startDate.atStartOfDay();
         LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
-        List<Orders> ordersList = ordersRepository.findBySellerIdAndDateRange(users.getBrand(),startDateTime,endDateTime);
+        List<Orders> ordersList = ordersRepository.findByBrandIdAndDateRange(users.getBrand(),startDateTime,endDateTime);
         log.info(ordersList);
         for(Orders order : ordersList) {
             Row row = sheet.createRow(rowIndex++);
@@ -782,7 +782,7 @@ public class ExcelService {
 
         int rowIndex = 1;
 
-        List<Orders> ordersList = ordersRepository.findByCancelAndSeller(users.getBrand());
+        List<Orders> ordersList = ordersRepository.findByCancelAndBrand(users.getBrand());
         log.info(ordersList);
         for(Orders order : ordersList) {
             Row row = sheet.createRow(rowIndex++);

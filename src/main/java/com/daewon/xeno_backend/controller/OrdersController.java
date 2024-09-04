@@ -163,13 +163,13 @@ public class OrdersController {
         }
     }
 
-    @GetMapping("/seller/list")
-    public ResponseEntity<List<OrderInfoBySellerDTO>> getOrderListBySeller(@AuthenticationPrincipal UserDetails userDetails, PageRequestDTO pageRequestDTO) {
+    @GetMapping("/Brand/list")
+    public ResponseEntity<List<OrderInfoByBrandDTO>> getOrderListByBrand(@AuthenticationPrincipal UserDetails userDetails, PageRequestDTO pageRequestDTO) {
         try {
             String userEmail = userDetails.getUsername();
 
             log.info("orderUserEmail : " + userEmail);
-            List<OrderInfoBySellerDTO> orderList = ordersService.getOrderListBySeller(userEmail);
+            List<OrderInfoByBrandDTO> orderList = ordersService.getOrderListByBrand(userEmail);
             log.info(orderList);
             return ResponseEntity.ok(orderList);
         } catch (Exception e) {
@@ -177,12 +177,12 @@ public class OrdersController {
         }
     }
 
-    @PutMapping(value = "/seller/status/update",produces = "application/json")
-    public ResponseEntity<?> updateOrderStatusBySeller(@RequestBody OrdersStatusUpdateDTO dto) {
+    @PutMapping(value = "/brand/status/update",produces = "application/json")
+    public ResponseEntity<?> updateOrderStatusByBrand(@RequestBody OrdersStatusUpdateDTO dto) {
         try {
 
             log.info(dto);
-             ordersService.updateOrderStatusBySeller(dto);
+             ordersService.updateOrderStatusByBrand(dto);
 
             return ResponseEntity.ok("\"성공\"");
         } catch (Exception e) {

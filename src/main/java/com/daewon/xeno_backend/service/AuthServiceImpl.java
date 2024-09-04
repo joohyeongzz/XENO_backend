@@ -44,7 +44,7 @@ public class AuthServiceImpl implements AuthService {
     private final ProductsImageRepository productsImageRepository;
     private final ProductsStarRepository productsStarRepository;
     private final ProductsLikeRepository productsLikeRepository;
-    private final ProductsSellerRepository productsSellerRepository;
+    private final ProductsBrandRepository productsBrandRepository;
     private final ReviewRepository reviewRepository;
     private final ReplyRepository replyRepository;
 
@@ -244,9 +244,9 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public SellerInfoCardDTO readSellerInfo(UserDetails userDetails) {
+    public BrandInfoCardDTO readBrandInfo(UserDetails userDetails) {
         Users users = userRepository.findByEmail(userDetails.getUsername()).orElse(null);
-        SellerInfoCardDTO dto = new SellerInfoCardDTO();
+        BrandInfoCardDTO dto = new BrandInfoCardDTO();
                 dto.setBrandName(users.getBrand().getBrandName());
                 dto.setName(users.getName());
 
@@ -292,7 +292,7 @@ public class AuthServiceImpl implements AuthService {
         productsImageRepository.deleteByProducts(product);
         productsStarRepository.deleteByProducts(product);
         productsLikeRepository.deleteByProducts(product);
-        productsSellerRepository.deleteByProducts(product);
+        productsBrandRepository.deleteByProducts(product);
 
         productsRepository.delete(product);
 
