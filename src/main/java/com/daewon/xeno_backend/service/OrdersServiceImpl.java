@@ -260,6 +260,7 @@ public class OrdersServiceImpl implements OrdersService {
                 dto.setProductId(order.getProductsOption().getProducts().getProductId());
                 dto.setCustomerName(users.getName());
                 dto.setAddress(users.getAddress());
+                dto.setProductOptionId(order.getProductsOption().getProductOptionId());
                 if (deliveryTrack != null) {
                     dto.setTrackingNumber(deliveryTrack.getTrackingNumber());
                     dto.setCarrierId(deliveryTrack.getCarrierId());

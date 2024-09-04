@@ -11,6 +11,7 @@ public class OrdersCardListDTO {
 
     private Long orderId;
     private Long productId;
+    private Long productOptionId;
     private String orderDate;
     private String brandName;
     private String productName;
