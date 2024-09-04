@@ -37,6 +37,9 @@ public interface ManagerService {
     // brand list 불러오기
     List<BrandListDTO> getAllBrands();
 
+    // 승인 대기중인 brand list 불러오기
+    List<BrandApproveListDTO> getAllBrandApprovers();
+
     // product list 불러오기
     List<ProductListDTO> getAllProducts();
 

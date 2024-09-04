@@ -49,6 +49,13 @@ public class ManagerController {
         return ResponseEntity.ok(managerService.getAllBrands());
     }
 
+    // brand 승인 대기중인 List 불러오는 메서드
+    @PreAuthorize("hasRole('MANAGER')")
+    @GetMapping("/brand/approve")
+    public ResponseEntity<List<BrandApproveListDTO>> getAllBrandApproves() {
+        return ResponseEntity.ok(managerService.getAllBrandApprovers());
+    }
+
     // product List 불러오는 메서드
     @PreAuthorize("hasRole('MANAGER')")
     @GetMapping("/brand/products")
