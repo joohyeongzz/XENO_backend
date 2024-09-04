@@ -3,6 +3,7 @@ package com.daewon.xeno_backend.controller;
 import com.daewon.xeno_backend.domain.ProductsOption;
 import com.daewon.xeno_backend.dto.UploadImageReadDTO;
 import com.daewon.xeno_backend.dto.order.OrderProductDTO;
+import com.daewon.xeno_backend.dto.order.OrderProductIdsReadDTO;
 import com.daewon.xeno_backend.dto.page.PageInfinityResponseDTO;
 import com.daewon.xeno_backend.dto.page.PageRequestDTO;
 import com.daewon.xeno_backend.dto.page.PageResponseDTO;
@@ -26,6 +27,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @Log4j2
@@ -36,11 +38,14 @@ public class ProductController {
     private final ProductService productService;
     private final ExcelService excelService;
 
-    @GetMapping("/option/ids/read")
-    public ResponseEntity<?> productOptionIdsRead(@RequestParam List<Long> productOptionIds) {
-        List<ProductsOption> products = productService.productOptionIdsRead(productOptionIds);
+    @PostMapping("/option/ids/read")
+    public ResponseEntity<?> productOptionIdsRead(@RequestBody List<OrderProductIdsReadDTO> productOptionInfos) {
 
-        log.info("products |||||||||||||||||||||||||||||" + products);
+        log.info(productOptionInfos);
+
+        List<OrderProductIdsReadDTO> products = productService.productOptionIdsRead(productOptionInfos);
+
+        log.info(products);
 
         try {
             return ResponseEntity.ok(products);

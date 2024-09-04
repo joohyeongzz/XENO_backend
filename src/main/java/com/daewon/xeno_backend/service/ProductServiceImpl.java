@@ -9,6 +9,7 @@ import com.daewon.xeno_backend.domain.*;
 import com.daewon.xeno_backend.domain.auth.Users;
 import com.daewon.xeno_backend.dto.UploadImageReadDTO;
 import com.daewon.xeno_backend.dto.order.OrderProductDTO;
+import com.daewon.xeno_backend.dto.order.OrderProductIdsReadDTO;
 import com.daewon.xeno_backend.dto.page.PageInfinityResponseDTO;
 import com.daewon.xeno_backend.dto.page.PageRequestDTO;
 import com.daewon.xeno_backend.dto.page.PageResponseDTO;
@@ -77,13 +78,22 @@ public class ProductServiceImpl implements ProductService {
 
     private final AmazonS3 s3Client;
 
-    public List<ProductsOption> productOptionIdsRead(List<Long> productOptionIds) {
-        List<ProductsOption> productOptions = new ArrayList<>();
+    public List<OrderProductIdsReadDTO> productOptionIdsRead(List<OrderProductIdsReadDTO> productOptionInfos) {
+        List<OrderProductIdsReadDTO> productOptions = new ArrayList<>();
 
-        for(Long productOptionId : productOptionIds) {
-            ProductsOption productsOption = productsOptionRepository.findByProductOptionId(productOptionId);
+        for(OrderProductIdsReadDTO productOptionInfo : productOptionInfos) {
+            ProductsOption productOption = productsOptionRepository.findByProductOptionId(productOptionInfo.getProductOptionId());
+            OrderProductIdsReadDTO orderProductIdsReadDTO = new OrderProductIdsReadDTO();
 
-            productOptions.add(productsOption);
+            orderProductIdsReadDTO.setProductName(productOption.getProducts().getName());
+            orderProductIdsReadDTO.setSize(productOption.getSize());
+            orderProductIdsReadDTO.setColor(productOption.getProducts().getColor());
+            orderProductIdsReadDTO.setPrice(productOption.getProducts().getPrice());
+            orderProductIdsReadDTO.setProductOptionId(productOptionInfo.getProductOptionId());
+            orderProductIdsReadDTO.setQuantity(productOptionInfo.getQuantity());
+            orderProductIdsReadDTO.setProductImage(productsImageRepository.findByProductId(productOption.getProducts().getProductId()).getUrl_1());
+            orderProductIdsReadDTO.setProductId(productOption.getProducts().getProductId());
+            productOptions.add(orderProductIdsReadDTO);
         }
 
         return productOptions;
