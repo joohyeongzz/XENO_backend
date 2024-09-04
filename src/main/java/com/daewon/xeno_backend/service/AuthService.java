@@ -1,5 +1,6 @@
 package com.daewon.xeno_backend.service;
 
+import com.daewon.xeno_backend.domain.auth.BrandApproval;
 import com.daewon.xeno_backend.domain.auth.Manager;
 import com.daewon.xeno_backend.domain.auth.Users;
 import com.daewon.xeno_backend.dto.auth.*;
@@ -24,7 +25,10 @@ public interface AuthService {
 
     SellerInfoCardDTO readSellerInfo(UserDetails userDetails);
 
-    UserSignupDTO signupBrand(BrandDTO dto);
+//    // brand 가입하면 승인대기중로 돌리는 메서드
+    BrandApprovalDTO requestBrandSignup(BrandDTO brandDTO);
+
+    UserSignupDTO signupBrand(String managerEmail, Long approvalId);
 
     Manager signupManager(UserSignupDTO userSignupDTO);
 
