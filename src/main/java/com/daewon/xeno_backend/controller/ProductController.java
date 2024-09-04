@@ -1,6 +1,9 @@
 package com.daewon.xeno_backend.controller;
 
+import com.daewon.xeno_backend.domain.ProductsOption;
 import com.daewon.xeno_backend.dto.UploadImageReadDTO;
+import com.daewon.xeno_backend.dto.order.OrderProductDTO;
+import com.daewon.xeno_backend.dto.order.OrderProductIdsReadDTO;
 import com.daewon.xeno_backend.dto.page.PageInfinityResponseDTO;
 import com.daewon.xeno_backend.dto.page.PageRequestDTO;
 import com.daewon.xeno_backend.dto.page.PageResponseDTO;
@@ -24,6 +27,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @Log4j2
@@ -33,6 +37,22 @@ public class ProductController {
 
     private final ProductService productService;
     private final ExcelService excelService;
+
+    @PostMapping("/option/ids/read")
+    public ResponseEntity<?> productOptionIdsRead(@RequestBody List<OrderProductIdsReadDTO> productOptionInfos) {
+
+        log.info(productOptionInfos);
+
+        List<OrderProductIdsReadDTO> products = productService.productOptionIdsRead(productOptionInfos);
+
+        log.info(products);
+
+        try {
+            return ResponseEntity.ok(products);
+        } catch (Exception e) {
+            return ResponseEntity.status(404).body("유효하지 않은 상품입니다.");
+        }
+    }
 
     @GetMapping("/read")
     public ResponseEntity<ProductInfoDTO> readProduct(@RequestParam("productId") Long productId) throws IOException {

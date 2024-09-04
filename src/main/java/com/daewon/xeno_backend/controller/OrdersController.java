@@ -2,6 +2,7 @@ package com.daewon.xeno_backend.controller;
 
 import com.daewon.xeno_backend.domain.auth.Customer;
 import com.daewon.xeno_backend.dto.auth.AuthSigninDTO;
+import com.daewon.xeno_backend.dto.cart.CartDTO;
 import com.daewon.xeno_backend.dto.order.*;
 import com.daewon.xeno_backend.dto.page.PageInfinityResponseDTO;
 import com.daewon.xeno_backend.dto.page.PageRequestDTO;
@@ -45,6 +46,34 @@ public class OrdersController {
     private final CustomerRepository customerRepository;
     private final UserRepository userRepository;
     private final ExcelService excelService;
+
+    @GetMapping("/delivery/info/read")
+    public ResponseEntity<?> getOrderDeliveryInfo(@RequestHeader("Authorization") String token) {
+        try {
+            if (token.startsWith("Bearer ")) {
+                token = token.substring(7);
+            }
+
+            Map<String, Object> claims = jwtUtil.validateToken(token);
+            Long userId = Long.parseLong(claims.get("userId").toString());
+
+            OrderDeliveryInfoReadDTO orderDeliveryInfoReadDTO = ordersService.getOrderDeliveryInfo(userId);
+
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            AuthSigninDTO authSigninDTO = (AuthSigninDTO) authentication.getPrincipal();
+            Long authenticatedUserId = authSigninDTO.getUserId();
+
+            log.info("인증된 유저 ID: " + authenticatedUserId);
+
+            if (!userId.equals(authenticatedUserId)) {
+                return ResponseEntity.status(403).body("접근 권한이 없습니다.");
+            }
+
+            return ResponseEntity.ok(orderDeliveryInfoReadDTO);
+        } catch (JwtException e) {
+            return ResponseEntity.status(401).body("토큰이 유효하지 않습니다.");
+        }
+    }
 
     @GetMapping
     public ResponseEntity<?> getAllOrders(@RequestHeader("Authorization") String token) {
