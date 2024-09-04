@@ -10,6 +10,7 @@ import com.daewon.xeno_backend.exception.ProductNotFoundException;
 import com.daewon.xeno_backend.exception.UnauthorizedException;
 import com.daewon.xeno_backend.exception.UserNotFoundException;
 import com.daewon.xeno_backend.repository.Products.*;
+import com.daewon.xeno_backend.repository.auth.BrandApprovalRepository;
 import com.daewon.xeno_backend.repository.auth.BrandRepository;
 import com.daewon.xeno_backend.repository.auth.CustomerRepository;
 import com.daewon.xeno_backend.repository.auth.UserRepository;
@@ -31,6 +32,7 @@ public class ManagerServiceImpl implements ManagerService {
     private final UserRepository userRepository;
     private final CustomerRepository customerRepository;
     private final BrandRepository brandRepository;
+    private final BrandApprovalRepository brandApprovalRepository;
     private final ProductsOptionRepository productsOptionRepository;
     private final ProductsImageRepository productsImageRepository;
     private final ProductsStarRepository productsStarRepository;
@@ -206,6 +208,25 @@ public class ManagerServiceImpl implements ManagerService {
             brandListDTO.setUsers(userInfo);
 
             return brandListDTO;
+        }).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<BrandApproveListDTO> getAllBrandApprovers() {
+        List<BrandApproval> brandApprovals = brandApprovalRepository.findAll();
+
+        return brandApprovals.stream().map(approval -> {
+            BrandApproveListDTO brandApproveListDTO = new BrandApproveListDTO();
+            brandApproveListDTO.setId(approval.getId());
+            brandApproveListDTO.setBrandName(approval.getBrandName());
+            brandApproveListDTO.setCompanyId(approval.getCompanyId());
+            brandApproveListDTO.setEmail(approval.getEmail());
+            brandApproveListDTO.setName(approval.getName());
+            brandApproveListDTO.setPhoneNumber(approval.getPhoneNumber());
+            brandApproveListDTO.setAddress(approval.getAddress());
+            brandApproveListDTO.setStatus(approval.getStatus());
+
+            return brandApproveListDTO;
         }).collect(Collectors.toList());
     }
 
