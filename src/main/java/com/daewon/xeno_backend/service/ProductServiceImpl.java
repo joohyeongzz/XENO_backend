@@ -74,13 +74,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductsOptionRepository productsOptionRepository;
     private final ExcelService excelService;
     private final S3Service s3Service;
- 
-
-    @Value("${aws.s3.bucket-name}")
-    private String bucketName;
-
-    private final AmazonS3 s3Client;
-
+    
     public List<OrderProductIdsReadDTO> productOptionIdsRead(List<OrderProductIdsReadDTO> productOptionInfos) {
         List<OrderProductIdsReadDTO> productOptions = new ArrayList<>();
 
