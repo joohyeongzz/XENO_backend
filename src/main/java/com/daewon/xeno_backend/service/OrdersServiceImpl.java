@@ -59,13 +59,15 @@ public class OrdersServiceImpl implements OrdersService {
     @Override
     public OrderDeliveryInfoReadDTO getOrderDeliveryInfo(Long userId) {
         Users user = userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException("해당하는 유저를 찾을 수 없습니다."));
-        String req = ordersRepository.findLatestOrderByUserId(userId);
+        Orders orders = ordersRepository.findLatestOrderByCustomerId(user.getCustomer().getCustomerId());
 
         OrderDeliveryInfoReadDTO orderDeliveryInfoReadDTO = new OrderDeliveryInfoReadDTO();
 
         orderDeliveryInfoReadDTO.setPhoneNumber(user.getPhoneNumber());
-        orderDeliveryInfoReadDTO.setReq(req);
+        orderDeliveryInfoReadDTO.setReq(orders.getReq());
         orderDeliveryInfoReadDTO.setAddress(user.getAddress());
+
+        log.info(orderDeliveryInfoReadDTO);
 
         return orderDeliveryInfoReadDTO;
     };
