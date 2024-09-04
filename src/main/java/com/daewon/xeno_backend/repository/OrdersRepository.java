@@ -40,14 +40,14 @@ public interface OrdersRepository extends JpaRepository<Orders, Long> {
     @Query("SELECT o FROM Orders o WHERE o.status = :status and o.productsOption = :option")
     List<Orders> findByStatusAndProductsOption(String status, ProductsOption option);
 
-    @Query("SELECT o FROM Orders o WHERE o.seller = :users AND o.createAt BETWEEN :startDate AND :endDate ORDER BY o.createAt DESC")
-    List<Orders> findBySellerIdAndDateRange(Brand users,LocalDateTime startDate,LocalDateTime endDate);
+    @Query("SELECT o FROM Orders o WHERE o.brand = :users AND o.createAt BETWEEN :startDate AND :endDate ORDER BY o.createAt DESC")
+    List<Orders> findByBrandIdAndDateRange(Brand users,LocalDateTime startDate,LocalDateTime endDate);
 
     @Query("SELECT o FROM Orders o WHERE o.orderNumber = :orderNumber")
     Orders findByOrderNumber(long orderNumber);
 
-    @Query("SELECT o FROM Orders o WHERE o.seller = :users AND o.status = '환불 요청'")
-    List<Orders> findByCancelAndSeller(Brand users);
+    @Query("SELECT o FROM Orders o WHERE o.brand = :users AND o.status = '환불 요청'")
+    List<Orders> findByCancelAndBrand(Brand users);
 
 
 

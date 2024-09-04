@@ -29,9 +29,9 @@ public interface OrdersService {
 
     ProductHeaderDTO getProductHeader(Long orderId, String email);
 
-   List<OrderInfoBySellerDTO> getOrderListBySeller(String email);
+   List<OrderInfoByBrandDTO> getOrderListByBrand(String email);
 
-    void updateOrderStatusBySeller(OrdersStatusUpdateDTO dto);
+    void updateOrderStatusByBrand(OrdersStatusUpdateDTO dto);
 
     String getLatestReqForUser(String email);
 

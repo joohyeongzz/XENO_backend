@@ -11,7 +11,7 @@ import com.daewon.xeno_backend.exception.UserNotFoundException;
 import com.daewon.xeno_backend.repository.*;
 import com.daewon.xeno_backend.repository.Products.ProductsImageRepository;
 import com.daewon.xeno_backend.repository.Products.ProductsOptionRepository;
-import com.daewon.xeno_backend.repository.Products.ProductsSellerRepository;
+import com.daewon.xeno_backend.repository.Products.ProductsBrandRepository;
 import com.daewon.xeno_backend.repository.auth.UserRepository;
 import io.jsonwebtoken.io.IOException;
 import jakarta.persistence.EntityNotFoundException;
@@ -51,7 +51,7 @@ public class OrdersServiceImpl implements OrdersService {
     private final OrdersRepository ordersRepository;
     private final ProductsOptionRepository productsOptionRepository;
     private final ProductsImageRepository productsImageRepository;
-    private final ProductsSellerRepository productsSellerRepository;
+    private final ProductsBrandRepository productsBrandRepository;
     private final ReviewRepository reviewRepository;
     private final DeliveryTrackRepository deliveryTrackRepository;
     private final OrdersRefundRepository ordersRefundRepository;
@@ -89,14 +89,14 @@ public class OrdersServiceImpl implements OrdersService {
 
 
         for(OrdersDTO dto : ordersDTO) {
-            ProductsSeller seller = productsSellerRepository.findByProducts(findProductOption(dto.getProductOptionId()).getProducts());
-            if(seller != null) {
+            ProductsBrand brand = productsBrandRepository.findByProducts(findProductOption(dto.getProductOptionId()).getProducts());
+            if(brand != null) {
                 Orders orders = Orders.builder()
                         .orderPayId(orderPayId)
                         .orderNumber(orderNumber)
                         .productsOption(findProductOption(dto.getProductOptionId()))
                         .customer(users)
-                        .seller(seller.getUsers().getBrand())
+                        .brand(brand.getBrand())
                         .status("결제 완료")
                         .paymentKey(dto.getPaymentKey())
                         .req(dto.getReq())
@@ -310,16 +310,16 @@ public class OrdersServiceImpl implements OrdersService {
     }
 
     @Override
-    public List<OrderInfoBySellerDTO> getOrderListBySeller(String email) {
+    public List<OrderInfoByBrandDTO> getOrderListByBrand(String email) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd");
         Users user = userRepository.findByEmail(email).orElse(null);
 
-        List<ProductsSeller> productsSellerList = productsSellerRepository.findByUsers(user);
-        List<OrderInfoBySellerDTO> list = new ArrayList<>();
-        for(ProductsSeller productsSeller : productsSellerList){
-            List<Orders> orders = ordersRepository.findByProductId(productsSeller.getProducts().getProductId());
+        List<ProductsBrand> productsBrandList = productsBrandRepository.findByBrand(user.getBrand());
+        List<OrderInfoByBrandDTO> list = new ArrayList<>();
+        for(ProductsBrand productsBrand : productsBrandList){
+            List<Orders> orders = ordersRepository.findByProductId(productsBrand.getProducts().getProductId());
             for(Orders order : orders) {
-                OrderInfoBySellerDTO dto = new OrderInfoBySellerDTO();
+                OrderInfoByBrandDTO dto = new OrderInfoByBrandDTO();
                 dto.setOrderId(order.getOrderId());
                 dto.setOrderNumber(order.getOrderNumber());
                 dto.setQuantity(order.getQuantity());
@@ -339,7 +339,7 @@ public class OrdersServiceImpl implements OrdersService {
     }
 
     @Override
-    public void updateOrderStatusBySeller(OrdersStatusUpdateDTO dto) {
+    public void updateOrderStatusByBrand(OrdersStatusUpdateDTO dto) {
         Orders orders = ordersRepository.findById(dto.getOrderId()).orElse(null);
 
         assert orders != null;

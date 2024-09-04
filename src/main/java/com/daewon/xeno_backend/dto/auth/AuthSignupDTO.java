@@ -10,7 +10,7 @@ public class AuthSignupDTO {
     private String name;
     private String email;
     private String companyId;
-    private boolean isSeller;
+    private boolean isBrand;
     private String address;
     private String phoneNumber;
     private String brandName;

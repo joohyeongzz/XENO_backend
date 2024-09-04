@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class OrderInfoBySellerDTO {
+public class OrderInfoByBrandDTO {
     private Long orderId;
     private Long orderNumber;
     private int quantity;

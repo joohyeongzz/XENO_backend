@@ -23,7 +23,7 @@ public interface AuthService {
 
     Users signin(final String email, final String password);
 
-    SellerInfoCardDTO readSellerInfo(UserDetails userDetails);
+    BrandInfoCardDTO readBrandInfo(UserDetails userDetails);
 
 //    // brand 가입하면 승인대기중로 돌리는 메서드
     BrandApprovalDTO requestBrandSignup(BrandDTO brandDTO);

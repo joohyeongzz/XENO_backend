@@ -81,8 +81,9 @@ public class AuthController {
     }
 
     @Operation(summary = "판매자 회원가입 처리", description = "판매자 회원가입 요청을 처리합니다.")
-    @PostMapping("/signup/seller")
-    public ResponseEntity<?> requestBrandSignup(@RequestBody BrandDTO dto) {
+
+    @PostMapping("/signup/brand")
+    public ResponseEntity<?> signupBrand(@RequestBody BrandDTO dto) {
         try {
             BrandApprovalDTO result = authService.requestBrandSignup(dto);
 
@@ -196,10 +197,10 @@ public class AuthController {
         }
     }
 
-    @GetMapping("/seller/read")
-    public ResponseEntity<?> readSellerInfo(@AuthenticationPrincipal UserDetails userDetails) {
+    @GetMapping("/brand/read")
+    public ResponseEntity<?> readBrandInfo(@AuthenticationPrincipal UserDetails userDetails) {
 
-        SellerInfoCardDTO dto = authService.readSellerInfo(userDetails);
+        BrandInfoCardDTO dto = authService.readBrandInfo(userDetails);
         return ResponseEntity.ok(dto);
 
 

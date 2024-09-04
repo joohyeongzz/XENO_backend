@@ -38,7 +38,7 @@ public class Orders extends BaseEntity {
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "brandId", referencedColumnName = "brandId")
   @OnDelete(action = OnDeleteAction.CASCADE)
-  private Brand seller;
+  private Brand brand;
 
   @Column(nullable = false)
   private Long orderNumber;
