@@ -11,6 +11,10 @@ import java.util.Map;
 
 public interface OrdersService {
 
+    void cancelOrder(OrderCancelDTO dto);
+
+    void refundOrder(OrderCancelDTO dto);
+
     List<OrdersListDTO> getAllOrders(Long userId);
 
     List<OrdersDTO> createOrders(List<OrdersDTO> ordersDTO, String email);
@@ -25,13 +29,11 @@ public interface OrdersService {
 
     ProductHeaderDTO getProductHeader(Long orderId, String email);
 
-    List<OrderInfoBySellerDTO> getOrderListBySeller(String email);
+   List<OrderInfoByBrandDTO> getOrderListByBrand(String email);
 
-    void updateOrderStatusBySeller(OrdersStatusUpdateDTO dto);
+    void updateOrderStatusByBrand(OrdersStatusUpdateDTO dto);
 
     String getLatestReqForUser(String email);
-
-    Map<Integer, Boolean> getSalesByYear();
 
     OrderDeliveryInfoReadDTO getOrderDeliveryInfo(Long userId);
 }

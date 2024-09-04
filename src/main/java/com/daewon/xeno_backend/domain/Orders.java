@@ -1,6 +1,7 @@
 package com.daewon.xeno_backend.domain;
 
 
+import com.daewon.xeno_backend.domain.auth.Brand;
 import com.daewon.xeno_backend.domain.auth.Users;
 import jakarta.persistence.*;
 import lombok.*;
@@ -37,10 +38,12 @@ public class Orders extends BaseEntity {
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "brandId", referencedColumnName = "brandId")
   @OnDelete(action = OnDeleteAction.CASCADE)
-  private Users seller;
+  private Brand brand;
 
   @Column(nullable = false)
   private Long orderNumber;
+
+  private String paymentKey;
 
   private String status;
 

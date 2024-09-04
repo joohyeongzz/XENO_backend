@@ -2,6 +2,7 @@ package com.daewon.xeno_backend.repository;
 
 import com.daewon.xeno_backend.domain.Orders;
 import com.daewon.xeno_backend.domain.ProductsOption;
+import com.daewon.xeno_backend.domain.auth.Brand;
 import com.daewon.xeno_backend.domain.auth.Users;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -36,16 +37,23 @@ public interface OrdersRepository extends JpaRepository<Orders, Long> {
 
     Optional<Orders> findTopByCustomerEmailOrderByCreateAtDesc(String email);
 
-
     @Query("SELECT o FROM Orders o WHERE o.status = :status and o.productsOption = :option")
     List<Orders> findByStatusAndProductsOption(String status, ProductsOption option);
 
-    @Query("SELECT o FROM Orders o WHERE o.seller = :users AND o.createAt BETWEEN :startDate AND :endDate ORDER BY o.createAt DESC")
-    List<Orders> findBySellerIdAndDateRange(Users users,LocalDateTime startDate,LocalDateTime endDate);
+    @Query("SELECT o FROM Orders o WHERE o.brand = :users AND o.createAt BETWEEN :startDate AND :endDate ORDER BY o.createAt DESC")
+    List<Orders> findByBrandIdAndDateRange(Brand users,LocalDateTime startDate,LocalDateTime endDate);
 
     @Query("SELECT o FROM Orders o WHERE o.orderNumber = :orderNumber")
     Orders findByOrderNumber(long orderNumber);
 
     @Query("SELECT o.req FROM Orders o WHERE o.customer.userId = :userId ORDER BY o.createAt DESC")
     String findLatestOrderByUserId(@Param("userId") Long userId);
+    @Query("SELECT o FROM Orders o WHERE o.brand = :users AND o.status = '환불 요청'")
+    List<Orders> findByCancelAndBrand(Brand users);
+
+
+
+
+
+
 }

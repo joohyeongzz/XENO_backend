@@ -2,10 +2,8 @@ package com.daewon.xeno_backend.controller;
 
 import com.daewon.xeno_backend.domain.auth.Level;
 import com.daewon.xeno_backend.domain.auth.UserRole;
-import com.daewon.xeno_backend.dto.manager.BrandListDTO;
-import com.daewon.xeno_backend.dto.manager.LevelUpdateDTO;
-import com.daewon.xeno_backend.dto.manager.PointUpdateDTO;
-import com.daewon.xeno_backend.dto.manager.UserListDTO;
+import com.daewon.xeno_backend.dto.auth.UserSignupDTO;
+import com.daewon.xeno_backend.dto.manager.*;
 import com.daewon.xeno_backend.exception.*;
 import com.daewon.xeno_backend.service.AuthService;
 import com.daewon.xeno_backend.service.ManagerService;
@@ -33,6 +31,7 @@ public class ManagerController {
 
     private final AuthService authService;
     private final ManagerService managerService;
+
     private final JWTUtil jwtUtil;
     private final TransactionTemplate transactionTemplate;
 
@@ -48,6 +47,20 @@ public class ManagerController {
     @GetMapping("/brand")
     public ResponseEntity<List<BrandListDTO>> getAllBrands() {
         return ResponseEntity.ok(managerService.getAllBrands());
+    }
+
+    // brand 승인 대기중인 List 불러오는 메서드
+    @PreAuthorize("hasRole('MANAGER')")
+    @GetMapping("/brand/approve")
+    public ResponseEntity<List<BrandApproveListDTO>> getAllBrandApproves() {
+        return ResponseEntity.ok(managerService.getAllBrandApprovers());
+    }
+
+    // product List 불러오는 메서드
+    @PreAuthorize("hasRole('MANAGER')")
+    @GetMapping("/brand/products")
+    public ResponseEntity<List<ProductListDTO>> getAllProducts() {
+        return ResponseEntity.ok(managerService.getAllProducts());
     }
 
     // user 강제 탈퇴 메서드
@@ -124,6 +137,7 @@ public class ManagerController {
         }
     }
 
+    // 특정 유저의 적립금 수정 메서드
     @PreAuthorize("hasRole('MANAGER')")
     @PutMapping("/point/{targetUserId}")
     public ResponseEntity<Map<String, Object>> updateUserPoint(Authentication authentication,
@@ -171,6 +185,7 @@ public class ManagerController {
         }
     }
 
+    // 특정 유저의 등급 수정 메서드
     @PreAuthorize("hasRole('MANAGER')")
     @PutMapping("/level/{targetUserId}")
     public ResponseEntity<Map<String, String>> updateUserLevel(
@@ -219,6 +234,7 @@ public class ManagerController {
         }
     }
 
+    // 특정 판매사 강제 탈퇴 메서드
     @PreAuthorize("hasRole('MANAGER')")
     @DeleteMapping("/brand/{targetBrandId}")
     public ResponseEntity<Map<String, Object>> deleteBrand(Authentication authentication,
@@ -264,9 +280,55 @@ public class ManagerController {
         }
     }
 
-    // product 강제 삭제 메서드
+    // 특정 판매사 유저 강제 탈퇴 메서드
+    // user 강제 탈퇴 메서드
     @PreAuthorize("hasRole('MANAGER')")
-    @DeleteMapping("/brand/product/{targetProductId}")
+    @DeleteMapping("/brand/users/{targetUserId}")
+    public ResponseEntity<?> deleteBrandDependsUser(Authentication authentication, @RequestHeader("Authorization") String token,
+                                        @PathVariable Long targetUserId) {
+
+        // token의 claim값에서 email값을 추출 후 문제 없으면 정상적으로 {targetUserId}값이 삭제 됨.
+        try {
+            String currentToken = token.replace("Bearer ", "");
+            Map<String, Object> claims = jwtUtil.validateToken(currentToken);
+            String managerEmail = claims.get("email").toString();
+            log.info("managerEmail: " + managerEmail);
+
+            String deletedUserEmail = managerService.deleteUserByManager(managerEmail, targetUserId);
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "해당 user의 탈퇴가 완료되었습니다.");
+            response.put("deletedUserEmail", deletedUserEmail);
+
+            log.info("delete중인 manager의 email은? : " + deletedUserEmail);
+
+            return ResponseEntity.ok(response);
+        } catch (JwtException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "token이 유효하지 않거나 만료됨");
+
+            return ResponseEntity.status(401).body(errorResponse);
+        } catch (UserNotFoundException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+
+            return ResponseEntity.status(404).body(errorResponse);
+        } catch (UnauthorizedException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+
+            return ResponseEntity.status(403).body(errorResponse);
+        } catch (Exception e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "사용자를 삭제하는 도중 오류가 발생 : " + e.getMessage());
+
+            return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
+
+    // product 강제 삭제 메서드
+//    @PreAuthorize("hasRole('MANAGER')")
+    @DeleteMapping("/brand/products/{targetProductId}")
     public ResponseEntity<?> deleteProductByManager(Authentication authentication, @PathVariable Long targetProductId) {
         String managerEmail = authentication.getName();
         log.info("제품 강제 삭제 요청 받음. 관리자: {}, 대상 제품 ID: {}", managerEmail, targetProductId);
@@ -284,7 +346,7 @@ public class ManagerController {
             log.info ("제품 삭제 successful. 관리자: {}, 제품 ID: {}", managerEmail, targetProductId);
 
             Map<String, String> response = new HashMap<>();
-            response.put("message", "관리자 회원가입 완료");
+            response.put("message", "제품 삭제 완료");
             response.put("deleteProduct", deleteProduct);
 
             return ResponseEntity.ok(response);
@@ -317,5 +379,47 @@ public class ManagerController {
 
             return ResponseEntity.status(500).body(errorReponse + e.getMessage());
         }
+    }
+
+    @PostMapping("/brand/approve/{approvalId}")
+    public ResponseEntity<?> approvalBrandSignup(Authentication authentication,
+                                                 @RequestHeader("Authorization") String token,@PathVariable Long approvalId) {
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            String currentToken = token.replace("Bearer ", "");
+            Map<String, Object> claims = jwtUtil.validateToken(currentToken);
+            String managerEmail = claims.get("email").toString();
+
+            UserSignupDTO approvedBrand = authService.signupBrand(managerEmail, approvalId);
+
+            response.put("status", "success");
+            response.put("message", "브랜드 가입이 승인되었습니다.");
+            response.put("approvedBrand", approvedBrand);
+
+            return ResponseEntity.ok(response);
+        } catch (JwtException e) {
+            log.error("JWT 토큰 처리 중 오류 발생", e);
+            response.put("status", "error");
+            response.put("message", "토큰이 만료됐거나 유효하지 않음");
+            return ResponseEntity.status(401).body(response);
+        } catch (UserNotFoundException | BrandNotFoundException e) {
+            log.warn("승인 대상을 찾을 수 없음: {}", e.getMessage());
+            response.put("status", "error");
+            response.put("message", e.getMessage());
+            return ResponseEntity.status(404).body(response);
+        } catch (UnauthorizedException e) {
+            log.warn("권한 없는 작업 시도: {}", e.getMessage());
+            response.put("status", "error");
+            response.put("message", e.getMessage());
+            return ResponseEntity.status(403).body(response);
+        } catch (Exception e) {
+            log.error("브랜드 가입 승인 중 오류 발생", e);
+            response.put("status", "error");
+            response.put("message", "브랜드 가입 승인 중 예기치 않은 오류가 발생했습니다: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
+
     }
 }

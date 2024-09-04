@@ -15,4 +15,5 @@ public class OrdersDTO {
     private int quantity;
     private Long amount;
     private int usedPoint;
+    private String paymentKey;
 }

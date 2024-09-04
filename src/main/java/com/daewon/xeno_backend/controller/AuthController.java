@@ -81,14 +81,15 @@ public class AuthController {
     }
 
     @Operation(summary = "판매자 회원가입 처리", description = "판매자 회원가입 요청을 처리합니다.")
-    @PostMapping("/signup/seller")
+
+    @PostMapping("/signup/brand")
     public ResponseEntity<?> signupBrand(@RequestBody BrandDTO dto) {
         try {
-            UserSignupDTO registeredBrand = authService.signupBrand(dto);
+            BrandApprovalDTO result = authService.requestBrandSignup(dto);
 
             Map<String, String> response = new HashMap<>();
-            response.put("message", "판매사 회원가입 완료");
-            response.put("registeredBrand", registeredBrand.toString());
+            response.put("message", "판매사 승인 대기중입니다.");
+            response.put("registeredBrand", result.toString());
 
             return ResponseEntity.status(201).body(response);
         } catch (DataIntegrityViolationException e) {
@@ -100,6 +101,7 @@ public class AuthController {
             return ResponseEntity.status(409).body(errorReponse);
         }
     }
+
 
     @Operation(summary = "관리자 회원가입 처리", description = "관리자 회원가입 요청을 처리합니다.")
     @PostMapping("/signup/manager")
@@ -195,10 +197,10 @@ public class AuthController {
         }
     }
 
-    @GetMapping("/seller/read")
-    public ResponseEntity<?> readSellerInfo(@AuthenticationPrincipal UserDetails userDetails) {
+    @GetMapping("/brand/read")
+    public ResponseEntity<?> readBrandInfo(@AuthenticationPrincipal UserDetails userDetails) {
 
-        SellerInfoCardDTO dto = authService.readSellerInfo(userDetails);
+        BrandInfoCardDTO dto = authService.readBrandInfo(userDetails);
         return ResponseEntity.ok(dto);
 
 

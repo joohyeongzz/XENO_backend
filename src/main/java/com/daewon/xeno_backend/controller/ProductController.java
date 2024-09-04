@@ -62,6 +62,14 @@ public class ProductController {
         return ResponseEntity.ok(productInfoDTO);
     }
 
+    @GetMapping("/read-by-brand")
+    public ResponseEntity<ProductInfoDTO> readProductByBrand(@RequestParam("productId") Long productId) throws IOException {
+        log.info(productId);
+        ProductInfoDTO productInfoDTO = productService.getProductInfoByBrand(productId);
+
+        return ResponseEntity.ok(productInfoDTO);
+    }
+
     @Operation(summary = "카테고리")
     @GetMapping("/read/category")
     public ResponseEntity<List<ProductColorInfoCardDTO>> readProductsListByCategory(@RequestParam String categoryId,
@@ -118,13 +126,13 @@ public class ProductController {
     }
 
 
-    @GetMapping("/seller/read")
-    public ResponseEntity<?> getProductListBySeller(@AuthenticationPrincipal UserDetails userDetails) {
+    @GetMapping("/brand/read")
+    public ResponseEntity<?> getProductListByBrand(@AuthenticationPrincipal UserDetails userDetails) {
         try {
             String userEmail = userDetails.getUsername();
 
             log.info("orderUserEmail : " + userEmail);
-            List<ProductListBySellerDTO> dtoList = productService.getProductListBySeller(userEmail);
+            List<ProductListByBrandDTO> dtoList = productService.getProductListByBrand(userEmail);
 
             return ResponseEntity.ok(dtoList);
         } catch (Exception e) {

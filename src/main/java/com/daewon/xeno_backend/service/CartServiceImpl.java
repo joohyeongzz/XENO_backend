@@ -128,7 +128,7 @@ public class CartServiceImpl implements CartService {
     public CartDTO convertToDTO(Cart cart) {
         CartDTO cartDTO = new CartDTO();
         cartDTO.setCartId(cart.getCartId());
-        cartDTO.setProductsOptionId(cart.getProductsOption().getProductOptionId());
+        cartDTO.setProductOptionId(cart.getProductsOption().getProductOptionId());
         cartDTO.setQuantity(cart.getQuantity());
         cartDTO.setAmount(cart.getPrice());
         cartDTO.setBrandName(cart.getProductsOption().getProducts().getBrandName());

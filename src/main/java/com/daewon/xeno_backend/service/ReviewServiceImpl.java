@@ -30,11 +30,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @Log4j2
 @RequiredArgsConstructor
+@Transactional
 public class ReviewServiceImpl implements ReviewService {
 
 
@@ -45,6 +47,7 @@ public class ReviewServiceImpl implements ReviewService {
     private final UserRepository userRepository;
     private final ReplyRepository replyRepository;
     private final ProductsStarRepository productsStarRepository;
+    private final S3Service s3Service;
 
 
     private ReviewInfoDTO convertToDTO(Review review, Users currentUser) {
@@ -66,21 +69,12 @@ public class ReviewServiceImpl implements ReviewService {
         int replyIndex = replyRepository.countByReviewId(review.getReviewId());
         dto.setReplyIndex(replyIndex);
         dto.setCreateAt(review.getCreateAt().format(formatter));
-
-
-
-//        ProductsImage productsImage = productsImageRepository.findByProductId(review.getOrder().getProductsOption().getProducts().getProductId());
-//        if (productsImage != null) {
-//            try {
-//                byte[] productImageData = getImage(productsImage.getUuid(), productsImage.getFileName());
-//                dto.setProductImage(productImageData);
-//            } catch (java.io.IOException e) {
-//                throw new RuntimeException(e);
-//            }
-//        } else {
-//            dto.setReviewImage(null);
-//        }
-
+        ReviewImage image = reviewImageRepository.findByReview(review);
+        if (image != null) {
+            dto.setReviewImage(image.getUrl());
+        } else {
+            dto.setReviewImage(null);
+        }
         return dto;
     }
 
@@ -117,14 +111,25 @@ public class ReviewServiceImpl implements ReviewService {
                 productsStar.setStarAvg(starAvg);
             }
             productsStarRepository.save(productsStar);
+
+            if(image != null) {
+                String url = s3Service.saveImage(image);
+                ReviewImage reviewImage = new ReviewImage();
+                reviewImage.setUrl(url);
+                reviewImage.setReview(review);
+                reviewImageRepository.save(reviewImage);
+            }
+
+
         } else {
             return "잘못된 주문 내역입니다.";
         }
             return "성공";
     }
 
+
     @Override
-    public String updateReview(Long reviewId, ReviewUpdateDTO reviewDTO, MultipartFile image) {
+    public String updateReview(Long reviewId, ReviewUpdateDTO reviewDTO, MultipartFile image) throws Exception {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new RuntimeException("Review not found with id: " + reviewId));
 
@@ -142,6 +147,32 @@ public class ReviewServiceImpl implements ReviewService {
         review.setStar(reviewDTO.getStar());
         reviewRepository.save(review);
 
+        if(image == null) {
+            ReviewImage reviewImage = reviewImageRepository.findByReview(review);
+            if(reviewImage != null) {
+                s3Service.deleteObjectFromS3(reviewImage.getUrl());
+                reviewImageRepository.delete(reviewImage);
+            }
+        } else {
+            ReviewImage reviewImage = reviewImageRepository.findByReview(review);
+            if(reviewImage != null) {
+                String uploadedImageHash = s3Service.calculateFileHash(image);
+                String s3Hash = s3Service.getFileHash(reviewImage.getUrl());
+                if(!uploadedImageHash.equals(s3Hash)) {
+                    s3Service.deleteObjectFromS3(reviewImage.getUrl());
+                    String url = s3Service.saveImage(image);
+                    reviewImage.setUrl(url);
+                    reviewImageRepository.save(reviewImage);
+                }
+            } else {
+                String url = s3Service.saveImage(image);
+                ReviewImage newImage = ReviewImage.builder()
+                        .url(url)
+                        .review(review)
+                        .build();
+                reviewImageRepository.save(newImage);
+            }
+        }
 
         return "성공";
 }
@@ -198,7 +229,6 @@ public class ReviewServiceImpl implements ReviewService {
                 .build();
     }
 
-
     // 리뷰 삭제
     @Override
     public void deleteReview(Long reviewId) {
@@ -207,9 +237,10 @@ public class ReviewServiceImpl implements ReviewService {
 
         long productId = review.getOrder().getProductsOption().getProducts().getProductId();
         ReviewImage reviewImage = reviewImageRepository.findByReview(review);
-
-
-
+        if (reviewImage != null ) {
+            s3Service.deleteObjectFromS3(reviewImage.getUrl());
+            reviewImageRepository.delete(reviewImage);
+        }
         ProductsStar productsStar = productsStarRepository.findByProductId(productId).orElse(null);
         productsStar.setStarTotal(productsStar.getStarTotal() - review.getStar());
         reviewRepository.deleteById(reviewId);

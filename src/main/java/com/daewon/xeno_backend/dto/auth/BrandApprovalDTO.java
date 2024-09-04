@@ -7,7 +7,10 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class SellerInfoCardDTO {
-    private String name;
+public class BrandApprovalDTO {
+
+    private Long Id;
+    private String email;
     private String brandName;
+    private String status;
 }
