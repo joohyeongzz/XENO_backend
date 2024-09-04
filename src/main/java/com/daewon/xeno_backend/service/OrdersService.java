@@ -35,5 +35,5 @@ public interface OrdersService {
 
     String getLatestReqForUser(String email);
 
-
+    OrderDeliveryInfoReadDTO getOrderDeliveryInfo(Long userId);
 }
