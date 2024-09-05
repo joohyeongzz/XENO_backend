@@ -192,6 +192,22 @@ public class OrdersController {
         }
     }
 
+
+
+    @GetMapping("/refund/list")
+    public ResponseEntity<PageInfinityResponseDTO<OrdersCardListDTO>> getRefundedOrderCardList(@AuthenticationPrincipal UserDetails userDetails, PageRequestDTO pageRequestDTO) {
+        try {
+            String userEmail = userDetails.getUsername();
+
+            log.info("orderUserEmail : " + userEmail);
+            PageInfinityResponseDTO<OrdersCardListDTO> orderCardList = ordersService.getRefundedOrderCardList(pageRequestDTO,userEmail);
+            log.info(orderCardList);
+            return ResponseEntity.ok(orderCardList);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
     @GetMapping("/Brand/list")
     public ResponseEntity<List<OrderInfoByBrandDTO>> getOrderListByBrand(@AuthenticationPrincipal UserDetails userDetails, PageRequestDTO pageRequestDTO) {
         try {
@@ -355,6 +371,20 @@ public class OrdersController {
                     .body("예상치 못한 오류가 발생했습니다.");
         }
     }
+
+    @PostMapping("/complete")
+    public ResponseEntity<String> orderComplete(@RequestBody Long orderId) {
+        try {
+            ordersService.orderComplete(orderId);
+            return ResponseEntity.ok("\"구매 확정 성공\"");
+        } catch (Exception e) {
+            // 오류 발생 시
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("\"구매 확정 실패\"");
+        }
+
+    }
+
+
 
 }
 

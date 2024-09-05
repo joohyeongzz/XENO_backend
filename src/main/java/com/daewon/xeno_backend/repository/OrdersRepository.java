@@ -21,7 +21,11 @@ public interface OrdersRepository extends JpaRepository<Orders, Long> {
 
     List<Orders> findByCustomer(Users user);
 
-    Page<Orders> findPagingOrdersByCustomer(Pageable pageable, Users user);
+    @Query("SELECT o FROM Orders o WHERE o.customer = :user AND o.status NOT IN ('환불 요청', '환불 완료', '결제 취소') ORDER BY o.createAt DESC")
+    Page<Orders> findPagingOrdersByCustomer(Pageable pageable, @Param("user") Users user);
+
+    @Query("SELECT o FROM Orders o WHERE o.customer = :user AND o.status IN ('환불 요청', '환불 완료', '결제 취소') ORDER BY o.createAt DESC")
+    Page<Orders> findPagingRefundedOrdersByCustomer(Pageable pageable, @Param("user") Users user);
 
     Optional<Orders> findByOrderId(Long orderId);
 
@@ -40,7 +44,7 @@ public interface OrdersRepository extends JpaRepository<Orders, Long> {
     @Query("SELECT o FROM Orders o WHERE o.status = :status and o.productsOption = :option")
     List<Orders> findByStatusAndProductsOption(String status, ProductsOption option);
 
-    @Query("SELECT o FROM Orders o WHERE o.brand = :users AND o.createAt BETWEEN :startDate AND :endDate ORDER BY o.createAt DESC")
+    @Query("SELECT o FROM Orders o WHERE o.brand = :users AND o.createAt BETWEEN :startDate AND :endDate AND o.status NOT IN ('환불 요청', '환불 완료','결제 취소') ORDER BY o.createAt DESC")
     List<Orders> findByBrandIdAndDateRange(Brand users,LocalDateTime startDate,LocalDateTime endDate);
 
     @Query("SELECT o FROM Orders o WHERE o.orderNumber = :orderNumber")

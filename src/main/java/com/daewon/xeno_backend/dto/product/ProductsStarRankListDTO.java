@@ -29,6 +29,6 @@ public class ProductsStarRankListDTO {
 
     private boolean isLike;
 
-    private byte[] productImage;
+    private String productImage;
     
 }

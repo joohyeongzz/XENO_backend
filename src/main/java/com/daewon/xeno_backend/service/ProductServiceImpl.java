@@ -26,6 +26,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
+import org.apache.commons.math3.stat.descriptive.summary.Product;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddressList;
 import org.apache.poi.ss.util.CellReference;
@@ -645,6 +646,9 @@ public class ProductServiceImpl implements ProductService {
             dto.setLike(false);
         }
 
+        ProductsImage image = productsImageRepository.findByProductId(productId);
+        dto.setProductImage(image.getUrl_1());
+
 
         return dto;
     }
@@ -897,6 +901,9 @@ public class ProductServiceImpl implements ProductService {
                     }else {
                         dto.setLike(false);
                     }
+                    ProductsImage image = productsImageRepository.findByProductId(productId);
+                    dto.setProductImage(image.getUrl_1());
+
 
                     return dto;
                 })
@@ -944,6 +951,10 @@ public class ProductServiceImpl implements ProductService {
                     }else {
                         dto.setLike(false);
                     }
+
+                    ProductsImage image = productsImageRepository.findByProductId(productId);
+                    dto.setProductImage(image.getUrl_1());
+
 
 
                     return dto;

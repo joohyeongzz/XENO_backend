@@ -40,6 +40,7 @@ public class Orders extends BaseEntity {
   @OnDelete(action = OnDeleteAction.CASCADE)
   private Brand brand;
 
+
   @Column(nullable = false)
   private Long orderNumber;
 

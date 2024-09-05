@@ -24,6 +24,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -239,7 +241,7 @@ public class OrdersServiceImpl implements OrdersService {
         Pageable pageable = PageRequest.of(
                 pageRequestDTO.getPageIndex() <= 0 ? 0 : pageRequestDTO.getPageIndex() - 1,
                 pageRequestDTO.getSize(),
-                Sort.by("orderId").ascending());
+                Sort.by(Sort.Order.desc("createAt")));
 
         Users users = userRepository.findByEmail(email).orElseThrow(() -> new EntityNotFoundException("User not found"));
 
@@ -284,6 +286,66 @@ public class OrdersServiceImpl implements OrdersService {
                 dto.setProductImage(image.getUrl_1());
                 dtoList.add(dto);
             }
+
+        return PageInfinityResponseDTO.<OrdersCardListDTO>withAll()
+                .pageRequestDTO(pageRequestDTO)
+                .dtoList(dtoList)
+                .totalIndex((int) orders.getTotalElements())
+                .build();
+    }
+
+    @Override
+    public PageInfinityResponseDTO<OrdersCardListDTO> getRefundedOrderCardList(PageRequestDTO pageRequestDTO,String email) {
+
+
+        Pageable pageable = PageRequest.of(
+                pageRequestDTO.getPageIndex() <= 0 ? 0 : pageRequestDTO.getPageIndex() - 1,
+                pageRequestDTO.getSize(),
+                Sort.by(Sort.Order.desc("createAt")));
+
+        Users users = userRepository.findByEmail(email).orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        Page<Orders> orders = ordersRepository.findPagingRefundedOrdersByCustomer(pageable,users);
+
+        List<OrdersCardListDTO> dtoList = new ArrayList<>();
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd");
+
+
+        for(Orders order : orders.getContent()) {
+            OrdersCardListDTO dto = new OrdersCardListDTO();
+            Review reviews = reviewRepository.findByUsersAndOrders(users,order);
+            if(reviews != null) {
+                dto.setReview(true);
+                dto.setReviewId(reviews.getReviewId());
+            } else{
+                dto.setReview(false);
+            }
+            DeliveryTrack deliveryTrack = deliveryTrackRepository.findByOrders(order);
+            ProductsImage image = productsImageRepository.findByProductId(order.getProductsOption().getProducts().getProductId());
+            dto.setOrderId(order.getOrderId());
+            dto.setOrderDate(order.getCreateAt().format(formatter));
+            dto.setStatus(order.getStatus());
+            dto.setAmount(order.getAmount());
+            dto.setQuantity(order.getQuantity());
+            dto.setColor(order.getProductsOption().getProducts().getColor());
+            dto.setSize(order.getProductsOption().getSize());
+            dto.setBrandName(order.getProductsOption().getProducts().getBrandName());
+            dto.setProductName(order.getProductsOption().getProducts().getName());
+            dto.setProductId(order.getProductsOption().getProducts().getProductId());
+            dto.setCustomerName(users.getName());
+            dto.setAddress(users.getAddress());
+            dto.setProductOptionId(order.getProductsOption().getProductOptionId());
+            if (deliveryTrack != null) {
+                dto.setTrackingNumber(deliveryTrack.getTrackingNumber());
+                dto.setCarrierId(deliveryTrack.getCarrierId());
+            } else {
+                dto.setTrackingNumber(null);
+                dto.setCarrierId(null);
+            }
+            dto.setProductImage(image.getUrl_1());
+            dtoList.add(dto);
+        }
 
         return PageInfinityResponseDTO.<OrdersCardListDTO>withAll()
                 .pageRequestDTO(pageRequestDTO)
@@ -386,7 +448,7 @@ public class OrdersServiceImpl implements OrdersService {
             // Check the response and update order status
             if (response.getStatusCode().is2xxSuccessful()) {
                 // Update order status to "환불 완료" (Refunded)
-                orders.setStatus("환불 완료");
+                orders.setStatus("결제 취소");
                 ordersRepository.save(orders);
                 log.info("Order status updated to 환불 완료 for order ID: " + dto.getOrderId());
             } else {
@@ -422,5 +484,20 @@ public class OrdersServiceImpl implements OrdersService {
                 .build();
         ordersRefundRepository.save(ordersRefund);
         ordersRepository.save(orders);
+    }
+
+    @Override
+    public void orderComplete(Long orderId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        String currentUserName = authentication.getName();
+        log.info("이름:"+currentUserName);
+        Users users = userRepository.findByEmail(currentUserName)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없음"));
+
+        Orders orders = ordersRepository.findByOrderIdAndUserId(orderId, users);
+        orders.setStatus("구매 확정");
+        ordersRepository.save(orders);
+
     }
 }

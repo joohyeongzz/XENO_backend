@@ -113,7 +113,7 @@
 //                            break;
 //                        case "INFORMATION_RECEIVED":
 //                            // 정보 수신 상태일 때의 처리, 예를 들어 초기 상태로 설정
-//                            deliveryTrack.getOrder().setStatus("정보 수신");
+//                            deliveryTrack.getOrder().setStatus("배송 중");
 //                            break;
 //                        case "AT_PICKUP":
 //                            // 픽업 지점에 도착한 경우의 처리
@@ -125,7 +125,7 @@
 //                            break;
 //                        case "OUT_FOR_DELIVERY":
 //                            // 배송 중 최종 단계
-//                            deliveryTrack.getOrder().setStatus("배송 준비 중");
+//                            deliveryTrack.getOrder().setStatus("배송 중");
 //                            break;
 //                        case "ATTEMPT_FAIL":
 //                            // 배송 시도 실패

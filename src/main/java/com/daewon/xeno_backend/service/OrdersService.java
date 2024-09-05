@@ -11,6 +11,9 @@ import java.util.Map;
 
 public interface OrdersService {
 
+
+    void orderComplete(Long orderId);
+
     void cancelOrder(OrderCancelDTO dto);
 
     void refundOrder(OrderCancelDTO dto);
@@ -26,6 +29,8 @@ public interface OrdersService {
     OrdersListDTO convertToDTO(Orders orders);
 
     PageInfinityResponseDTO<OrdersCardListDTO> getOrderCardList(PageRequestDTO pageRequestDTO,String email);
+
+    PageInfinityResponseDTO<OrdersCardListDTO> getRefundedOrderCardList(PageRequestDTO pageRequestDTO,String email);
 
     ProductHeaderDTO getProductHeader(Long orderId, String email);
 
