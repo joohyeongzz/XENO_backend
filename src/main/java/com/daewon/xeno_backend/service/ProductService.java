@@ -58,6 +58,5 @@ public interface ProductService {
 
     UploadImageReadDTO getUploadImageByProductNumber(String productNumber);
 
-
-
+    long getSoldOutProductsCount();
 }
