@@ -857,7 +857,7 @@ public class ExcelService {
                 // 첫 번째 행(헤더)은 건너뜀
                 if (row.getRowNum() == 0) continue;
                 if(row.getCell(13) == null || row.getCell(13).getStringCellValue().trim().isEmpty() ||
-                        !row.getCell(13).getStringCellValue().equals("완료")) continue;
+                        !row.getCell(13).getStringCellValue().equals("확인")) continue;
 
                 // 비어 있는 행 건너뜀
                 if (row.getCell(0) == null || row.getCell(0).getCellType() == CellType.STRING) {
