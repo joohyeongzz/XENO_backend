@@ -13,6 +13,7 @@ import com.daewon.xeno_backend.repository.ReplyRepository;
 import com.daewon.xeno_backend.repository.ReviewRepository;
 import com.daewon.xeno_backend.repository.auth.*;
 import com.daewon.xeno_backend.utils.JWTUtil;
+import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.math3.stat.descriptive.summary.Product;
@@ -170,42 +171,8 @@ public class AuthServiceImpl implements AuthService {
                         .build())
                 .build();
 
-        // 승인 완료 이메일 발송
-        emailService.sendApprovalEmail(savedUser.getEmail(), brand.getBrandName());
-
         return signupDTO;
     }
-
-    //    // 판매사 회원가입
-//    @Override
-//    public UserSignupDTO signupBrand(BrandDTO dto) {
-//        Brand brand = brandRepository.findByBrandName(dto.getBrandName())
-//                .orElseGet(() -> {
-//                    if (dto.getCompanyId() == null) {
-//                        throw new IllegalArgumentException("New brand requires a company ID");
-//                    }
-//                    Brand newBrand = Brand.builder()
-//                            .brandName(dto.getBrandName())
-//                            .companyId(dto.getCompanyId())
-//                            .build();
-//                    newBrand.addRole(UserRole.SELLER);
-//                    return brandRepository.save(newBrand);
-//                });
-//
-//        Users user = Users.builder()
-//                .email(dto.getEmail())
-//                .password(passwordEncoder.encode(dto.getPassword()))
-//                .name(dto.getName())
-//                .address(dto.getAddress())
-//                .phoneNumber(dto.getPhoneNumber())
-//                .brand(brand)
-//                .build();
-//        user.addRole(UserRole.SELLER);
-//
-//        Users savedUser = userRepository.save(user);
-//
-//        return convertToDTO(savedUser);
-//    }
 
     // 관리자 회원가입
     @Override

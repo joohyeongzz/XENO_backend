@@ -381,6 +381,7 @@ public class ManagerController {
         }
     }
 
+    // brand 가입 승인 메서드
     @PostMapping("/brand/approve/{approvalId}")
     public ResponseEntity<?> approvalBrandSignup(Authentication authentication,
                                                  @RequestHeader("Authorization") String token,@PathVariable Long approvalId) {
