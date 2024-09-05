@@ -98,22 +98,33 @@ public class ExcelService {
                 product.setSale(row.getCell(5) == null || row.getCell(5).getNumericCellValue() == 0 ? false : true);
 
                 product.setColors(row.getCell(6).getStringCellValue());
-
                 String sizeString = getCellValue(row.getCell(7)); // Comma-separated sizes
                 String stockString = getCellValue(row.getCell(8)); // Comma-separated stocks
 
                 String[] sizes = sizeString.split(",");
                 String[] stocks = stockString.split(",");
 
+                if (sizes.length != stocks.length) {
+                    // 로깅 또는 오류 처리
+                    System.err.println("Sizes and stocks arrays must have the same length for row " + row.getRowNum());
+                    continue; // 다음 행으로 넘어갑니다.
+                }
+
                 List<ProductSizeDTO> sizeDTOs = new ArrayList<>();
                 for (int i = 0; i < sizes.length; i++) {
                     ProductSizeDTO sizeDTO = new ProductSizeDTO();
                     sizeDTO.setSize(sizes[i].trim());
 
-                    // 소수점이 포함된 문자열을 Double로 변환한 후 정수로 변환
-                    double stockDouble = Double.parseDouble(stocks[i].trim());
-                    int stockInt = (int) Math.round(stockDouble);
-                    sizeDTO.setStock(stockInt);
+                    try {
+                        // 소수점을 포함한 문자열을 Double로 변환한 후 정수로 변환
+                        double stockDouble = Double.parseDouble(stocks[i].trim());
+                        int stockInt = (int) Math.round(stockDouble);
+                        sizeDTO.setStock(stockInt);
+                    } catch (NumberFormatException e) {
+                        // 숫자 변환 오류 처리
+                        System.err.println("Error parsing stock value: " + stocks[i]);
+                        sizeDTO.setStock(0); // 기본값 또는 오류 처리 로직
+                    }
 
                     sizeDTOs.add(sizeDTO);
                 }
@@ -305,6 +316,16 @@ public class ExcelService {
         for (int i = 0; i < headerNames.length; i++) {
             Cell headerCell = headerRow.createCell(i);
             headerCell.setCellValue(headerNames[i]);
+        }
+
+        CellStyle textStyle = workbook.createCellStyle();
+        DataFormat format = workbook.createDataFormat();
+        textStyle.setDataFormat(format.getFormat("@")); // Text format
+
+        for (int rowIndex = 1; rowIndex <= 100; rowIndex++) { // 예를 들어 100행 정도를 처리
+            Row row = sheet.createRow(rowIndex); // 행 생성
+            Cell stockCell = row.createCell(8); // '재고' 열 셀 생성
+            stockCell.setCellStyle(textStyle); // 텍스트 서식 적용
         }
 
         // Write to ByteArrayOutputStream
