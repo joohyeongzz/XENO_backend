@@ -41,4 +41,15 @@ public interface OrdersService {
     String getLatestReqForUser(String email);
 
     OrderDeliveryInfoReadDTO getOrderDeliveryInfo(Long userId);
+
+    List<OrdersCountDTO> getOrdersCountByPaymentAndRefund();
+
+    List<OrdersSalesAmountDTO> getBrandSalesAmount(int year);
+
+    List<OrdersSalesQuantityDTO>  getBrandSalesCount(int year);
+
+    List<OrdersTopSellingProductsDTO>  getBrandTop10SellingProducts();
+
+
+
 }

@@ -1126,4 +1126,12 @@ public class ProductServiceImpl implements ProductService {
         return dto;
     }
 
+    @Override
+    public long getSoldOutProductsCount() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserName = authentication.getName();
+        Users users = userRepository.findByEmail(currentUserName).orElse(null);
+        long count = productsBrandRepository.countBySoldOut(users.getBrand());
+        return count;
+    }
 }

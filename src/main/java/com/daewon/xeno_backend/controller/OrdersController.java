@@ -386,7 +386,7 @@ public class OrdersController {
         try {
             // Process the file
             excelService.parseCancelOrderExcelFile(excel);
-            return ResponseEntity.ok("성공");
+            return ResponseEntity.ok("\"성공\"");
         } catch (IOException e) {
             // Log the exception and return a server error response
             e.printStackTrace();
@@ -411,6 +411,29 @@ public class OrdersController {
         }
 
     }
+
+    @GetMapping("/count")
+    public List<OrdersCountDTO> getOrdersCount() {
+        return ordersService.getOrdersCountByPaymentAndRefund();
+    }
+
+
+
+    @GetMapping("/amount-by-date")
+    public List<OrdersSalesAmountDTO> getBrandSalesAmount(@RequestParam int year) {
+        return ordersService.getBrandSalesAmount(year);
+    }
+
+    @GetMapping("/quantity-by-date")
+    public List<OrdersSalesQuantityDTO> getBrandSalesCount(@RequestParam int year) {
+        return ordersService.getBrandSalesCount(year);
+    }
+
+    @GetMapping("/selling-products-top10")
+    public List<OrdersTopSellingProductsDTO> getBrandTop10SellingProducts() {
+        return ordersService.getBrandTop10SellingProducts();
+    }
+
 
 
 

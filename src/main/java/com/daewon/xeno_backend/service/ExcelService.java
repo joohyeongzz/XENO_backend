@@ -725,7 +725,7 @@ public class ExcelService {
 
         LocalDateTime startDateTime = startDate.atStartOfDay();
         LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
-        List<Orders> ordersList = ordersRepository.findByBrandIdAndDateRange(users.getBrand(),startDateTime,endDateTime);
+        List<Orders> ordersList = ordersRepository.findByBrandAndDateRange(users.getBrand(),startDateTime,endDateTime);
         log.info(ordersList);
         for(Orders order : ordersList) {
             Row row = sheet.createRow(rowIndex++);
@@ -803,7 +803,7 @@ public class ExcelService {
 
         int rowIndex = 1;
 
-        List<Orders> ordersList = ordersRepository.findByCancelAndBrand(users.getBrand());
+        List<Orders> ordersList = ordersRepository.findByStatusAndBrand("환불 요청",users.getBrand());
         log.info(ordersList);
         for(Orders order : ordersList) {
             Row row = sheet.createRow(rowIndex++);
