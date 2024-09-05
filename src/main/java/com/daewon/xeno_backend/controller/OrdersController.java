@@ -32,6 +32,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -146,20 +147,47 @@ public class OrdersController {
         return ResponseEntity.ok(latestReq);
     }
 
-    //  프론트에서 address, phoneNumber 값을 보내주면 해당하는 user의 address, phoneNumber 추가됨.
+   //  프론트에서 address, phoneNumber 값을 보내주면 해당하는 user의 address, phoneNumber 추가됨.
     @PostMapping("/delivery")
-    public ResponseEntity<String> updateDeliveryInfo(@RequestBody DeliveryOrdersDTO deliveryOrdersDTO,
-                                                     @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<Map<String, Object>> updateDeliveryInfo(@RequestBody Map<String, Object> deliveryInfo,
+                                                                  @AuthenticationPrincipal UserDetails userDetails) {
+        Map<String, Object> response = new HashMap<>();
+
         try {
+            String address = (String) deliveryInfo.get("address");
+            String phoneNumber = (String) deliveryInfo.get("phoneNumber");
+
+            if (address == null || phoneNumber == null) {
+                response.put("success", false);
+                response.put("message", "주소와 전화번호를 모두 제공해야 합니다.");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            // 사용자 정보 업데이트
             ordersService.updateUserDeliveryInfo(
                     userDetails.getUsername(),
-                    deliveryOrdersDTO.getAddress(),
-                    deliveryOrdersDTO.getPhoneNumber()
+                    address,
+                    phoneNumber
             );
 
-            return ResponseEntity.ok("배송 정보를 업데이트 했습니다.");
+            // 업데이트된 정보를 응답에 포함
+            response.put("success", true);
+            response.put("message", "배송 정보를 업데이트 했습니다.");
+            response.put("updatedInfo", new HashMap<String, Object>() {{
+                put("address", address);
+                put("phoneNumber", phoneNumber);
+            }});
+
+            return ResponseEntity.ok(response);
+
+        } catch (ClassCastException e) {
+            response.put("success", false);
+            response.put("message", "잘못된 데이터 형식입니다.");
+            return ResponseEntity.badRequest().body(response);
         } catch (Exception e) {
-            return ResponseEntity.status(400).body("알맞은 주소와 휴대폰 번호를 입력해주세요");
+            response.put("success", false);
+            response.put("message", "서버 오류가 발생했습니다.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 
