@@ -20,8 +20,6 @@ public class BrandApproval extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Brand 관련 정보
-    @Column(unique = true)
     private String brandName;
 
     private String companyId;

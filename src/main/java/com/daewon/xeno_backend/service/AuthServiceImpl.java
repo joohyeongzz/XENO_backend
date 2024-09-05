@@ -50,6 +50,8 @@ public class AuthServiceImpl implements AuthService {
 
     private final BrandApprovalRepository brandApprovalRepository;
 
+    private final EmailService emailService;
+
 
     @Override
     @Transactional
@@ -87,6 +89,15 @@ public class AuthServiceImpl implements AuthService {
     // 판매사 회원가입시 승인대기 상태로 돌리는 메서드
     @Override
     public BrandApprovalDTO requestBrandSignup(BrandDTO brandDTO) {
+        // 먼저 동일한 brandName과 email로 승인 대기 중인 신청이 있는지 확인
+        Optional<BrandApproval> existingApproval = brandApprovalRepository.findByBrandNameAndEmailAndStatus(
+                brandDTO.getBrandName(), brandDTO.getEmail(), "승인 대기");
+
+        if (existingApproval.isPresent()) {
+            throw new IllegalArgumentException("이 브랜드 이름과 이메일로 이미 승인 대기 중인 신청이 있습니다.");
+        }
+
+        // 새로운 BrandApproval 생성
         BrandApproval brandApproval = BrandApproval.builder()
                 .brandName(brandDTO.getBrandName())
                 .companyId(brandDTO.getCompanyId())
@@ -99,12 +110,8 @@ public class AuthServiceImpl implements AuthService {
                 .build();
         brandApproval.addRole(UserRole.SELLER);
 
-        try {
-            BrandApproval savedBrandApproval = brandApprovalRepository.save(brandApproval);
-            return new BrandApprovalDTO(savedBrandApproval.getId(), savedBrandApproval.getEmail(), savedBrandApproval.getBrandName(), "승인 대기");
-        } catch (DataIntegrityViolationException e) {
-            throw new IllegalArgumentException("이 이름 또는 이메일을 사용하는 브랜드는 이미 승인 대기 중입니다.", e);
-        }
+        BrandApproval savedBrandApproval = brandApprovalRepository.save(brandApproval);
+        return new BrandApprovalDTO(savedBrandApproval.getId(), savedBrandApproval.getEmail(), savedBrandApproval.getBrandName(), "승인 대기");
     }
 
     @Override
@@ -117,7 +124,6 @@ public class AuthServiceImpl implements AuthService {
             throw new UnauthorizedException("브랜드 승인 권한이 없습니다.");
         }
 
-
         BrandApproval brandApproval = brandApprovalRepository.findById(approvalId)
                 .orElseThrow(() -> new IllegalArgumentException("승인이 완료되지 않았습니다."));
 
@@ -125,13 +131,16 @@ public class AuthServiceImpl implements AuthService {
             throw new IllegalStateException("승인 대기 상태입니다.");
         }
 
-        // Brand 생성 및 저장
-        Brand brand = Brand.builder()
-                .brandName(brandApproval.getBrandName())
-                .companyId(brandApproval.getCompanyId())
-                .build();
-        brand.addRole(UserRole.SELLER);
-        Brand savedBrand = brandRepository.save(brand);
+        // 기존 브랜드 찾기 또는 새로 생성
+        Brand brand = brandRepository.findByBrandName(brandApproval.getBrandName())
+                .orElseGet(() -> {
+                    Brand newBrand = Brand.builder()
+                            .brandName(brandApproval.getBrandName())
+                            .companyId(brandApproval.getCompanyId())
+                            .build();
+                    newBrand.addRole(UserRole.SELLER);
+                    return brandRepository.save(newBrand);
+                });
 
         // User 생성 및 저장
         Users user = Users.builder()
@@ -140,7 +149,7 @@ public class AuthServiceImpl implements AuthService {
                 .name(brandApproval.getName())
                 .address(brandApproval.getAddress())
                 .phoneNumber(brandApproval.getPhoneNumber())
-                .brand(savedBrand)
+                .brand(brand)
                 .build();
         user.addRole(UserRole.SELLER);
         Users savedUser = userRepository.save(user);
@@ -148,7 +157,7 @@ public class AuthServiceImpl implements AuthService {
         brandApproval.setStatus("승인 완료");
         brandApprovalRepository.save(brandApproval);
 
-        return UserSignupDTO.builder()
+        UserSignupDTO signupDTO = UserSignupDTO.builder()
                 .userId(savedUser.getUserId())
                 .email(savedUser.getEmail())
                 .password(savedUser.getPassword())
@@ -156,10 +165,15 @@ public class AuthServiceImpl implements AuthService {
                 .address(savedUser.getAddress())
                 .phoneNumber(savedUser.getPhoneNumber())
                 .brand(BrandSignupDTO.builder()
-                        .brandName(savedBrand.getBrandName())
-                        .companyId(savedBrand.getCompanyId())
+                        .brandName(brand.getBrandName())
+                        .companyId(brand.getCompanyId())
                         .build())
                 .build();
+
+        // 승인 완료 이메일 발송
+        emailService.sendApprovalEmail(savedUser.getEmail(), brand.getBrandName());
+
+        return signupDTO;
     }
 
     //    // 판매사 회원가입
