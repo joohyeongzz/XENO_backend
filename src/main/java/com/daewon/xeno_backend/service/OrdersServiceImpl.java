@@ -11,23 +11,37 @@ import com.daewon.xeno_backend.exception.UserNotFoundException;
 import com.daewon.xeno_backend.repository.*;
 import com.daewon.xeno_backend.repository.Products.ProductsImageRepository;
 import com.daewon.xeno_backend.repository.Products.ProductsOptionRepository;
-import com.daewon.xeno_backend.repository.Products.ProductsSellerRepository;
+import com.daewon.xeno_backend.repository.Products.ProductsBrandRepository;
 import com.daewon.xeno_backend.repository.auth.UserRepository;
 import io.jsonwebtoken.io.IOException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import net.minidev.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.*;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.client.RestTemplate;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.Month;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -41,11 +55,26 @@ public class OrdersServiceImpl implements OrdersService {
     private final OrdersRepository ordersRepository;
     private final ProductsOptionRepository productsOptionRepository;
     private final ProductsImageRepository productsImageRepository;
-    private final ProductsSellerRepository productsSellerRepository;
+    private final ProductsBrandRepository productsBrandRepository;
     private final ReviewRepository reviewRepository;
+    private final DeliveryTrackRepository deliveryTrackRepository;
+    private final OrdersRefundRepository ordersRefundRepository;
 
+    @Override
+    public OrderDeliveryInfoReadDTO getOrderDeliveryInfo(Long userId) {
+        Users user = userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException("해당하는 유저를 찾을 수 없습니다."));
+        Orders orders = ordersRepository.findLatestOrderByCustomerId(user.getCustomer().getCustomerId());
 
+        OrderDeliveryInfoReadDTO orderDeliveryInfoReadDTO = new OrderDeliveryInfoReadDTO();
 
+        orderDeliveryInfoReadDTO.setPhoneNumber(user.getPhoneNumber());
+        orderDeliveryInfoReadDTO.setReq(orders.getReq());
+        orderDeliveryInfoReadDTO.setAddress(user.getAddress());
+
+        log.info(orderDeliveryInfoReadDTO);
+
+        return orderDeliveryInfoReadDTO;
+    };
 
     @Override
     public List<OrdersListDTO> getAllOrders(Long userId) {
@@ -77,20 +106,27 @@ public class OrdersServiceImpl implements OrdersService {
 
         List<Orders> savedOrders = new ArrayList<>();
 
+
         for(OrdersDTO dto : ordersDTO) {
-            ProductsSeller seller = productsSellerRepository.findByProducts(findProductOption(dto.getProductOptionId()).getProducts());
-            Orders orders  = Orders.builder()
-                .orderPayId(orderPayId)
-                .orderNumber(orderNumber)
-                .productsOption(findProductOption(dto.getProductOptionId()))
-                .customer(users)
-                .seller(seller.getUsers())
-                .status("결제 완료")
-                .req(dto.getReq())
-                .quantity(dto.getQuantity())
-                .amount(dto.getAmount())
-                .build();
-            savedOrders.add(ordersRepository.save(orders));
+            ProductsBrand brand = productsBrandRepository.findByProducts(findProductOption(dto.getProductOptionId()).getProducts());
+            if(brand != null) {
+                Orders orders = Orders.builder()
+                        .orderPayId(orderPayId)
+                        .orderNumber(orderNumber)
+                        .productsOption(findProductOption(dto.getProductOptionId()))
+                        .customer(users)
+                        .brand(brand.getBrand())
+                        .status("결제 완료")
+                        .paymentKey(dto.getPaymentKey())
+                        .req(dto.getReq())
+                        .quantity(dto.getQuantity())
+                        .amount(dto.getAmount())
+                        .build();
+                savedOrders.add(ordersRepository.save(orders));
+                ProductsOption productsOption = productsOptionRepository.findByProductOptionId(dto.getProductOptionId());
+                productsOption.setStock(productsOption.getStock() - dto.getQuantity());
+                productsOptionRepository.save(productsOption);
+            }
         }
 
         // 저장된 주문들을 DTO로 변환하여 반환
@@ -166,11 +202,9 @@ public class OrdersServiceImpl implements OrdersService {
 
     // 주문번호 orderNumber 랜덤생성
     private Long generateOrderNumber() {
-        long timestamp = System.currentTimeMillis();
         long random = new Random().nextInt(1000000); // 6자리 랜덤 숫자
 
-        // timestamp를 왼쪽으로 20비트 시프트하고 랜덤 값을 더함
-        return (timestamp << 20) | random;
+        return random;
     }
 
     // 영문 대소문자, 숫자, 특수문자 -, _, =로 이루어진 6자 이상 64자 이하의 문자열 이어야함.
@@ -212,7 +246,7 @@ public class OrdersServiceImpl implements OrdersService {
         Pageable pageable = PageRequest.of(
                 pageRequestDTO.getPageIndex() <= 0 ? 0 : pageRequestDTO.getPageIndex() - 1,
                 pageRequestDTO.getSize(),
-                Sort.by("orderId").ascending());
+                Sort.by(Sort.Order.desc("createAt")));
 
         Users users = userRepository.findByEmail(email).orElseThrow(() -> new EntityNotFoundException("User not found"));
 
@@ -221,8 +255,6 @@ public class OrdersServiceImpl implements OrdersService {
         List<OrdersCardListDTO> dtoList = new ArrayList<>();
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd");
-
-
 
 
                 for(Orders order : orders.getContent()) {
@@ -234,7 +266,8 @@ public class OrdersServiceImpl implements OrdersService {
                 } else{
                     dto.setReview(false);
                 }
-
+                DeliveryTrack deliveryTrack = deliveryTrackRepository.findByOrders(order);
+                ProductsImage image = productsImageRepository.findByProductId(order.getProductsOption().getProducts().getProductId());
                 dto.setOrderId(order.getOrderId());
                 dto.setOrderDate(order.getCreateAt().format(formatter));
                 dto.setStatus(order.getStatus());
@@ -245,10 +278,79 @@ public class OrdersServiceImpl implements OrdersService {
                 dto.setBrandName(order.getProductsOption().getProducts().getBrandName());
                 dto.setProductName(order.getProductsOption().getProducts().getName());
                 dto.setProductId(order.getProductsOption().getProducts().getProductId());
-
+                dto.setCustomerName(users.getName());
+                dto.setAddress(users.getAddress());
+                dto.setProductOptionId(order.getProductsOption().getProductOptionId());
+                if (deliveryTrack != null) {
+                    dto.setTrackingNumber(deliveryTrack.getTrackingNumber());
+                    dto.setCarrierId(deliveryTrack.getCarrierId());
+                } else {
+                    dto.setTrackingNumber(null);
+                    dto.setCarrierId(null);
+                }
+                dto.setProductImage(image.getUrl_1());
                 dtoList.add(dto);
             }
 
+        return PageInfinityResponseDTO.<OrdersCardListDTO>withAll()
+                .pageRequestDTO(pageRequestDTO)
+                .dtoList(dtoList)
+                .totalIndex((int) orders.getTotalElements())
+                .build();
+    }
+
+    @Override
+    public PageInfinityResponseDTO<OrdersCardListDTO> getRefundedOrderCardList(PageRequestDTO pageRequestDTO,String email) {
+
+
+        Pageable pageable = PageRequest.of(
+                pageRequestDTO.getPageIndex() <= 0 ? 0 : pageRequestDTO.getPageIndex() - 1,
+                pageRequestDTO.getSize(),
+                Sort.by(Sort.Order.desc("createAt")));
+
+        Users users = userRepository.findByEmail(email).orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        Page<Orders> orders = ordersRepository.findPagingRefundedOrdersByCustomer(pageable,users);
+
+        List<OrdersCardListDTO> dtoList = new ArrayList<>();
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd");
+
+
+        for(Orders order : orders.getContent()) {
+            OrdersCardListDTO dto = new OrdersCardListDTO();
+            Review reviews = reviewRepository.findByUsersAndOrders(users,order);
+            if(reviews != null) {
+                dto.setReview(true);
+                dto.setReviewId(reviews.getReviewId());
+            } else{
+                dto.setReview(false);
+            }
+            DeliveryTrack deliveryTrack = deliveryTrackRepository.findByOrders(order);
+            ProductsImage image = productsImageRepository.findByProductId(order.getProductsOption().getProducts().getProductId());
+            dto.setOrderId(order.getOrderId());
+            dto.setOrderDate(order.getCreateAt().format(formatter));
+            dto.setStatus(order.getStatus());
+            dto.setAmount(order.getAmount());
+            dto.setQuantity(order.getQuantity());
+            dto.setColor(order.getProductsOption().getProducts().getColor());
+            dto.setSize(order.getProductsOption().getSize());
+            dto.setBrandName(order.getProductsOption().getProducts().getBrandName());
+            dto.setProductName(order.getProductsOption().getProducts().getName());
+            dto.setProductId(order.getProductsOption().getProducts().getProductId());
+            dto.setCustomerName(users.getName());
+            dto.setAddress(users.getAddress());
+            dto.setProductOptionId(order.getProductsOption().getProductOptionId());
+            if (deliveryTrack != null) {
+                dto.setTrackingNumber(deliveryTrack.getTrackingNumber());
+                dto.setCarrierId(deliveryTrack.getCarrierId());
+            } else {
+                dto.setTrackingNumber(null);
+                dto.setCarrierId(null);
+            }
+            dto.setProductImage(image.getUrl_1());
+            dtoList.add(dto);
+        }
 
         return PageInfinityResponseDTO.<OrdersCardListDTO>withAll()
                 .pageRequestDTO(pageRequestDTO)
@@ -283,22 +385,23 @@ public class OrdersServiceImpl implements OrdersService {
                 order.getReq(),
                 order.getQuantity(),
                 order.getAmount(),
-                order.getUsePoint()
+                order.getUsePoint(),
+                order.getPaymentKey()
         );
     }
 
     @Override
-    public List<OrderInfoBySellerDTO> getOrderListBySeller(String email) {
+    public List<OrderInfoByBrandDTO> getOrderListByBrand(String email) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd");
         Users user = userRepository.findByEmail(email).orElse(null);
 
-        List<ProductsSeller> productsSellerList = productsSellerRepository.findByUsers(user);
-        List<OrderInfoBySellerDTO> list = new ArrayList<>();
-        for(ProductsSeller productsSeller : productsSellerList){
-            List<Orders> orders = ordersRepository.findByProductId(productsSeller.getProducts().getProductId());
+        List<ProductsBrand> productsBrandList = productsBrandRepository.findByBrand(user.getBrand());
+        List<OrderInfoByBrandDTO> list = new ArrayList<>();
+        for(ProductsBrand productsBrand : productsBrandList){
+            List<Orders> orders = ordersRepository.findByProductId(productsBrand.getProducts().getProductId());
             for(Orders order : orders) {
-                OrderInfoBySellerDTO dto = new OrderInfoBySellerDTO();
-                dto.setOrderID(order.getOrderId());
+                OrderInfoByBrandDTO dto = new OrderInfoByBrandDTO();
+                dto.setOrderId(order.getOrderId());
                 dto.setOrderNumber(order.getOrderNumber());
                 dto.setQuantity(order.getQuantity());
                 dto.setSize(order.getProductsOption().getSize());
@@ -317,7 +420,7 @@ public class OrdersServiceImpl implements OrdersService {
     }
 
     @Override
-    public void updateOrderStatusBySeller(OrdersStatusUpdateDTO dto) {
+    public void updateOrderStatusByBrand(OrdersStatusUpdateDTO dto) {
         Orders orders = ordersRepository.findById(dto.getOrderId()).orElse(null);
 
         assert orders != null;
@@ -329,7 +432,194 @@ public class OrdersServiceImpl implements OrdersService {
     }
 
     @Override
-    public Map<Integer, Boolean> getSalesByYear() {
-        return Map.of();
+    public void cancelOrder(OrderCancelDTO dto) {
+        Orders orders = ordersRepository.findById(dto.getOrderId()).orElse(null);
+        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = getHeaders();
+        JSONObject params = new JSONObject();
+        params.put("cancelReason", dto.getReason());
+        params.put("cancelAmount", orders.getAmount());
+        String url = "https://api.tosspayments.com/v1/payments/" + orders.getPaymentKey() + "/cancel";
+        HttpEntity<String> requestEntity = new HttpEntity<>(params.toString(), headers);
+
+        try {
+            ResponseEntity<Map> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    requestEntity,
+                    Map.class
+            );
+
+            // Check the response and update order status
+            if (response.getStatusCode().is2xxSuccessful()) {
+                // Update order status to "환불 완료" (Refunded)
+                orders.setStatus("결제 취소");
+                ordersRepository.save(orders);
+                log.info("Order status updated to 환불 완료 for order ID: " + dto.getOrderId());
+            } else {
+                log.error("Failed to cancel payment. Response code: " + response.getStatusCode());
+            }
+        } catch (Exception e) {
+            log.error("Error occurred while canceling the payment: ", e);
+        }
     }
+
+
+    private HttpHeaders getHeaders(){
+        HttpHeaders httpHeaders = new HttpHeaders();
+        String testAPIKey = new String(Base64.getEncoder().encode("test_sk_PBal2vxj814Q4P6pa7vkr5RQgOAN:".getBytes(StandardCharsets.UTF_8)));
+        httpHeaders.setBasicAuth(testAPIKey);
+        httpHeaders.setContentType(MediaType.APPLICATION_JSON);
+        httpHeaders.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+        httpHeaders.set("Idempotency-Key", generateIdempotencyKey());
+        return httpHeaders;
+    }
+
+    private String generateIdempotencyKey() {
+        return UUID.randomUUID().toString();
+    }
+
+    @Override
+    public void refundOrder(OrderCancelDTO dto) {
+        Orders orders = ordersRepository.findById(dto.getOrderId()).orElse(null);
+        orders.setStatus("환불 요청");
+        OrdersRefund ordersRefund = OrdersRefund.builder()
+                .order(orders)
+                .reason(dto.getReason())
+                .build();
+        ordersRefundRepository.save(ordersRefund);
+        ordersRepository.save(orders);
+    }
+
+    @Override
+    public void orderComplete(Long orderId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        String currentUserName = authentication.getName();
+        log.info("이름:"+currentUserName);
+        Users users = userRepository.findByEmail(currentUserName)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없음"));
+
+        Orders orders = ordersRepository.findByOrderIdAndUserId(orderId, users);
+        orders.setStatus("구매 확정");
+        ordersRepository.save(orders);
+    }
+    public List<OrdersCountDTO> getOrdersCountByPaymentAndRefund() {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        String currentUserName = authentication.getName();
+        log.info("이름:"+currentUserName);
+        Users users = userRepository.findByEmail(currentUserName)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없음"));
+        long refundCount = ordersRepository.countByStatus("환불 요청", users.getBrand()); // 환불 요청된 상품 수
+        long paymentCompleteCount = ordersRepository.countByStatus("결제 완료", users.getBrand());
+
+        List<OrdersCountDTO> ordersCountDTOList = new ArrayList<>();
+        OrdersCountDTO ordersCountDTO = new OrdersCountDTO();
+        ordersCountDTO.setStatus("refund");
+        ordersCountDTO.setCount(refundCount);
+        ordersCountDTOList.add(ordersCountDTO);
+        ordersCountDTO = new OrdersCountDTO();
+        ordersCountDTO.setStatus("paymentComplete");
+        ordersCountDTO.setCount(paymentCompleteCount);
+        ordersCountDTOList.add(ordersCountDTO);
+        return ordersCountDTOList;
+    }
+
+    @Override
+    public List<OrdersSalesAmountDTO> getBrandSalesAmount(int year) {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserName = authentication.getName();
+        log.info("이름: " + currentUserName);
+
+        Users users = userRepository.findByEmail(currentUserName)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없음"));
+
+        LocalDateTime startDateTime = LocalDateTime.of(year, Month.JANUARY, 1, 0, 0, 0);
+        LocalDateTime endDateTime = LocalDateTime.of(year, Month.DECEMBER, 31, 23, 59, 59);
+
+        List<Orders> orders = ordersRepository.findByBrandAndDateRange(users.getBrand(), startDateTime, endDateTime);
+
+        // 월별 매출 데이터 집계 및 정렬
+        return getMonthlySalesAmount(orders);
+    }
+
+    public List<OrdersSalesAmountDTO> getMonthlySalesAmount(List<Orders> orders) {
+        // 날짜 포맷터를 정의합니다.
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM");
+
+        // 월별로 amount를 집계합니다.
+        Map<String, Long> monthlySalesMap = orders.stream()
+                .collect(Collectors.groupingBy(
+                        order -> order.getCreateAt().format(formatter), // 월별 포맷
+                        Collectors.summingLong(Orders::getAmount) // amount 합계
+                ));
+
+        // 월별 집계 결과를 DTO 리스트로 변환합니다.
+        List<OrdersSalesAmountDTO> ordersSalesAmountDTOList = monthlySalesMap.entrySet().stream()
+                .map(entry -> new OrdersSalesAmountDTO(
+                        entry.getKey(), // "yyyy-MM"
+                        entry.getValue() // 월별 총 매출액
+                ))
+                .sorted(Comparator.comparing(OrdersSalesAmountDTO::getDate)) // 월 순서로 정렬
+                .collect(Collectors.toList());
+
+        return ordersSalesAmountDTOList;
+    }
+
+    @Override
+    public List<OrdersSalesQuantityDTO> getBrandSalesCount(int year) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserName = authentication.getName();
+        log.info("이름: " + currentUserName);
+
+        Users users = userRepository.findByEmail(currentUserName)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없음"));
+
+        LocalDateTime startDateTime = LocalDateTime.of(year, Month.JANUARY, 1, 0, 0, 0);
+        LocalDateTime endDateTime = LocalDateTime.of(year, Month.DECEMBER, 31, 23, 59, 59);
+
+        List<Orders> orders = ordersRepository.findByBrandAndDateRange(users.getBrand(), startDateTime, endDateTime);
+        return getMonthlySalesCount(orders);
+    }
+
+    public List<OrdersSalesQuantityDTO> getMonthlySalesCount(List<Orders> orders) {
+        // 날짜 포맷터를 정의합니다.
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM");
+
+        // 월별로 quantity를 집계합니다.
+        Map<String, Long> monthlySalesMap = orders.stream()
+                .collect(Collectors.groupingBy(
+                        order -> order.getCreateAt().format(formatter), // 월별 포맷
+                        Collectors.summingLong(Orders::getQuantity) // quantity 합계
+                ));
+
+        // 월별 집계 결과를 DTO 리스트로 변환합니다.
+        List<OrdersSalesQuantityDTO> ordersSalesAmountDTOList = monthlySalesMap.entrySet().stream()
+                .map(entry -> new OrdersSalesQuantityDTO(
+                        entry.getKey(), // "yyyy-MM"
+                        entry.getValue() // 월별 총 수량
+                ))
+                .sorted(Comparator.comparing(OrdersSalesQuantityDTO::getDate)) // 월 순서로 정렬
+                .collect(Collectors.toList());
+
+        return ordersSalesAmountDTOList;
+    }
+
+    @Override
+    public List<OrdersTopSellingProductsDTO> getBrandTop10SellingProducts() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserName = authentication.getName();
+        log.info("이름: " + currentUserName);
+
+        Users users = userRepository.findByEmail(currentUserName)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없음"));
+        Pageable pageable = PageRequest.of(0, 10); // 페이지 인덱스 0, 제한 10
+
+        return  ordersRepository.findTopSellingProducts(users.getBrand(), pageable);
+    }
+
+
 }

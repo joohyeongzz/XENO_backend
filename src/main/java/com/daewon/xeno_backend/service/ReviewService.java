@@ -17,7 +17,7 @@ public interface ReviewService {
 
     ReviewInfoDTO readReviewInfo(Long reviewId);
 
-    String updateReview(Long reviewId, ReviewUpdateDTO reviewDTO, MultipartFile image);
+    String updateReview(Long reviewId, ReviewUpdateDTO reviewDTO, MultipartFile image) throws Exception;
 
     void deleteReview(Long reviewId);
 

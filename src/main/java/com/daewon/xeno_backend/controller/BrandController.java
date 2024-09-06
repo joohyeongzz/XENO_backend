@@ -1,15 +1,13 @@
 
 package com.daewon.xeno_backend.controller;
 
-import com.daewon.xeno_backend.dto.auth.SellerInfoCardDTO;
-import com.daewon.xeno_backend.exception.UserNotFoundException;
+import com.daewon.xeno_backend.dto.auth.BrandInfoCardDTO;
 import com.daewon.xeno_backend.security.UsersDetailsService;
 import com.daewon.xeno_backend.service.AuthService;
 import com.daewon.xeno_backend.utils.JWTUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,12 +18,15 @@ import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Log4j2
-@RequestMapping("/api/seller")
+@RequestMapping("/api/brand")
 @RequiredArgsConstructor
 @RestController
 @EnableWebSecurity
-public class SellerController {
+public class BrandController {
 
     private final JWTUtil jwtUtil;
     private final AuthService authService;
@@ -33,9 +34,9 @@ public class SellerController {
     private final PlatformTransactionManager transactionManager;
 
     // brand 탈퇴 메서드
-    @PreAuthorize("hasRole('SELLER, MANAGER')")
+//    @PreAuthorize("hasRole('SELLER, MANAGER')")
     @DeleteMapping("/delete")
-    public ResponseEntity<String> deleteBrand(Authentication authentication) {
+    public ResponseEntity<Map<String,String>> deleteBrand(Authentication authentication) {
         log.info("브랜드 삭제 요청 받음. 이메일: {}", authentication.getName());
 
         // TransactionalTemplate을 생성하여 프로그래밍 방식의 Transactional 관리를 가능하게 함
@@ -57,20 +58,26 @@ public class SellerController {
                 }
             });
             log.info("브랜드 삭제 성공. 이메일: {}", authentication.getName());
-            return ResponseEntity.ok("브랜드 계정 및 관련 데이터가 성공적으로 삭제되었습니다.");
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "브랜드 계정 및 관련 데이터가 성공적으로 삭제되었습니다.");
+            response.put("deleteBrand", authentication.toString());
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("브랜드 삭제 중 예기치 않은 오류 발생. 이메일: {}", authentication.getName(), e);
-            return ResponseEntity.status(500).body("브랜드 삭제 중 오류가 발생했습니다.");
+
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "브랜드 삭제 중 오류가 발생했습니다." + e.getMessage());
+
+            return ResponseEntity.status(500).body(errorResponse);
         }
     }
 
     @GetMapping("/read")
-    public ResponseEntity<?> readSellerInfo(@AuthenticationPrincipal UserDetails userDetails) {
-
-        SellerInfoCardDTO dto = authService.readSellerInfo(userDetails);
+    public ResponseEntity<?> readBrandInfo(@AuthenticationPrincipal UserDetails userDetails) {
+        BrandInfoCardDTO dto = authService.readBrandInfo(userDetails);
         return ResponseEntity.ok(dto);
-
-
     }
 
 }

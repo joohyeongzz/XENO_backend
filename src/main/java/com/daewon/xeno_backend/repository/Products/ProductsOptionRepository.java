@@ -13,7 +13,9 @@ public interface ProductsOptionRepository extends JpaRepository<ProductsOption, 
     @Query("SELECT p FROM ProductsOption p WHERE p.products.productId = :productId")
     List<ProductsOption> findByProductId(@Param("productId") Long productId);
 
-    //
+    @Query("SELECT p FROM ProductsOption p WHERE p.productOptionId = :productOptionId")
+    ProductsOption findByProductOptionId(@Param("productOptionId") Long productOptionId);
+
     void deleteByProducts_ProductId(Long productId);
 
     @Modifying

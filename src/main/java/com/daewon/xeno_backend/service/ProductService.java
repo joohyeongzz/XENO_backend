@@ -4,7 +4,10 @@ package com.daewon.xeno_backend.service;
 
 import com.daewon.xeno_backend.domain.Products;
 
+import com.daewon.xeno_backend.domain.ProductsOption;
 import com.daewon.xeno_backend.dto.UploadImageReadDTO;
+import com.daewon.xeno_backend.dto.order.OrderProductDTO;
+import com.daewon.xeno_backend.dto.order.OrderProductIdsReadDTO;
 import com.daewon.xeno_backend.dto.page.PageInfinityResponseDTO;
 import com.daewon.xeno_backend.dto.page.PageRequestDTO;
 import com.daewon.xeno_backend.dto.page.PageResponseDTO;
@@ -14,10 +17,12 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 public interface ProductService {
 
 
+    List<OrderProductIdsReadDTO> productOptionIdsRead(List<OrderProductIdsReadDTO> productOptionInfos);
 //    String asd(MultipartFile file);
 
     void uploadImages(String productNumber, List<MultipartFile> productImages ,MultipartFile productDetailImage);
@@ -25,7 +30,7 @@ public interface ProductService {
     void updateProductImages(String productNumber, List<MultipartFile> productImages ,MultipartFile productDetailImage) throws Exception;
 
     ProductInfoDTO getProductInfo(Long productId) throws IOException;
-
+    ProductInfoDTO  getProductInfoByBrand(Long productId) throws IOException;
     ProductColorInfoCardDTO getProductCardInfo(Long productId);
 
     ProductDetailImagesDTO getProductDetailImages(Long productId, int page, int size);
@@ -41,7 +46,7 @@ public interface ProductService {
     PageInfinityResponseDTO<ProductsStarRankListDTO> getrankTop50(String category, PageRequestDTO pageRequestDTO);
 
 
-    List<ProductListBySellerDTO> getProductListBySeller(String email);
+    List<ProductListByBrandDTO> getProductListByBrand(String email);
 
 //    PageResponseDTO<ProductsSearchDTO> productCategorySearch(String category, PageRequestDTO pageRequestDTO);
 
@@ -49,10 +54,11 @@ public interface ProductService {
 
     void saveProductsFromExcel(MultipartFile excel);
 
+    void updateProductsFromExcel(MultipartFile excel);
+
     List<UploadImageReadDTO> getUploadImageAll();
 
     UploadImageReadDTO getUploadImageByProductNumber(String productNumber);
 
-
-
+    long getSoldOutProductsCount();
 }
