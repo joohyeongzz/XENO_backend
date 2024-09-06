@@ -332,12 +332,13 @@ public class ProductServiceImpl implements ProductService {
                     .collect(Collectors.toSet());
 
             List<ProductsBrand> allProducts = productsBrandRepository.findByBrand(users.getBrand());
-
+            // DB에서 품번 추출
             Set<Products> productNumbersFromDB = allProducts.stream()
                     .map(ProductsBrand::getProducts)
                     .collect(Collectors.toSet());
 
 
+            // 엑셀의 품번과 DB의 품번이 같을시 에러
             for (Products product : productNumbersFromDB) {
                 if (productNumbersFromExcel.contains(product.getProductNumber())) {
                     throw new IllegalStateException("이미 존재하는 품번입니다.");
@@ -367,7 +368,7 @@ public class ProductServiceImpl implements ProductService {
                             .build();
                     productsBrandRepository.save(productsBrand);
 
-                    for(ProductSizeDTO size: dto.getSize()){
+                    for (ProductSizeDTO size : dto.getSize()) {
                         ProductsOption productsOption = ProductsOption.builder()
                                 .products(newProduct)
                                 .size(size.getSize())
@@ -376,14 +377,14 @@ public class ProductServiceImpl implements ProductService {
                         productsOptionRepository.save(productsOption);
                     }
 
-                    ProductsImage image = productsImageRepository.findByProductNumberAndUsers(dto.getProductNumber(),users);
+                    ProductsImage image = productsImageRepository.findByProductNumberAndUsers(dto.getProductNumber(), users);
 
                     log.info(image);
                     log.info(dto);
                     // URL 일치 여부 확인
                     if (image != null) {
                         // 비교할 URL을 문자열로 저장
-                        StringBuilder errorMessage = new StringBuilder("URLs do not match. Issues with: "+ (index++)+"번째");
+                        StringBuilder errorMessage = new StringBuilder("URLs do not match. Issues with: " + (index++) + "번째");
 
                         boolean isValid = true;
 
@@ -427,102 +428,7 @@ public class ProductServiceImpl implements ProductService {
                         productsImageRepository.save(image);
 
                     } else {
-                        throw new IllegalStateException("품번이 맞지 않습니다.");
-                    }
-                } else {
-                    existingProduct.setName(dto.getName());
-                    existingProduct.setCategory(dto.getCategory());
-                    existingProduct.setCategorySub(dto.getCategorySub());
-                    existingProduct.setPrice(dto.getPrice());
-                    existingProduct.setPriceSale(dto.getPriceSale());
-                    existingProduct.setIsSale(dto.isSale());
-                    existingProduct.setSeason(dto.getSeason());
-                    existingProduct.setColor(dto.getColors());
-
-                    productsRepository.save(existingProduct);
-                    List<ProductsOption> productsColorSizes = productsOptionRepository.findByProductId(existingProduct.getProductId());
-                    // 엑셀에서 가져온 사이즈 목록
-                    Set<String> sizesFromExcel = dto.getSize().stream()
-                            .map(sizeDTO -> sizeDTO.getSize())
-                            .collect(Collectors.toSet());
-
-                    // 기존 사이즈 목록을 사이즈 이름으로 매핑
-                    Map<String, ProductsOption> existingColorSizeMap = productsColorSizes.stream()
-                            .collect(Collectors.toMap(ProductsOption::getSize, colorSize -> colorSize));
-
-                    // 엑셀에서 가져온 사이즈를 기반으로 업데이트 및 추가 작업
-                    for (ProductSizeDTO sizeDTO : dto.getSize()) {
-                        String size =sizeDTO.getSize();
-                        ProductsOption existingColorSize = existingColorSizeMap.get(size);
-
-                        if (existingColorSize == null) {
-                            // 기존에 사이즈가 없는 경우 새로 생성
-                            existingColorSize = ProductsOption.builder()
-                                    .products(existingProduct)
-                                    .size(size)
-                                    .stock(sizeDTO.getStock()) // 여기서 사이즈와 함께 초기 재고도 설정
-                                    .build();
-                            productsOptionRepository.save(existingColorSize);
-                        } else {
-                            // 기존 사이즈가 있는 경우 재고 업데이트
-                            existingColorSize.setStock(sizeDTO.getStock());
-                            productsOptionRepository.save(existingColorSize);
-                        }
-                    }
-
-                    // 엑셀 데이터에 없는 사이즈 삭제
-                    for (ProductsOption colorSize : productsColorSizes) {
-                        if (!sizesFromExcel.contains(colorSize.getSize())) {
-                            productsOptionRepository.delete(colorSize);
-                        }
-                    }
-
-                    ProductsImage image = productsImageRepository.findByProductNumberAndUsers(dto.getProductNumber(),users);
-
-                    // URL 일치 여부 확인
-                    if (image != null) {
-                        // 비교할 URL을 문자열로 저장
-                        StringBuilder errorMessage = new StringBuilder("URLs do not match. Issues with: "+ (index++)+"번째");
-
-                        boolean isValid = true;
-
-                        // 각 URL 비교 및 일치하지 않는 경우 메시지 추가
-                        if (!equalsIgnoreNullAndEmpty(image.getUrl_1(), dto.getUrl_1())) {
-                            errorMessage.append("url_1, ");
-                            isValid = false;
-                        }
-                        if (!equalsIgnoreNullAndEmpty(image.getUrl_2(), dto.getUrl_2())) {
-                            errorMessage.append("url_2, ");
-                            isValid = false;
-                        }
-                        if (!equalsIgnoreNullAndEmpty(image.getUrl_3(), dto.getUrl_3())) {
-                            errorMessage.append("url_3, ");
-                            isValid = false;
-                        }
-                        if (!equalsIgnoreNullAndEmpty(image.getUrl_4(), dto.getUrl_4())) {
-                            errorMessage.append("url_4, ");
-                            isValid = false;
-                        }
-                        if (!equalsIgnoreNullAndEmpty(image.getUrl_5(), dto.getUrl_5())) {
-                            errorMessage.append("url_5, ");
-                            isValid = false;
-                        }
-                        if (!equalsIgnoreNullAndEmpty(image.getUrl_6(), dto.getUrl_6())) {
-                            errorMessage.append("url_6, ");
-                            isValid = false;
-                        }
-                        if (!equalsIgnoreNullAndEmpty(image.getDetail_url(), dto.getDetail_url())) {
-                            errorMessage.append("detail_url ");
-                            isValid = false;
-                        }
-
-                        // 오류 메시지에서 마지막 쉼표와 공백 제거
-                        if (!isValid) {
-                            errorMessage.setLength(errorMessage.length() - 2);
-                            throw new IllegalStateException(errorMessage.toString());
-                        }
-                    } else {
-                        throw new IllegalStateException("UploadImage not found. Operation cancelled.");
+                        throw new IllegalStateException(dto.getProductNumber()+ "의 이미지가 존재하지 않습니다.");
                     }
                 }
             }
@@ -534,7 +440,6 @@ public class ProductServiceImpl implements ProductService {
 
     @Transactional
     public void updateProductsFromExcel(MultipartFile excel) {
-       int index = 1;
              try {
 
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -549,14 +454,16 @@ public class ProductServiceImpl implements ProductService {
 
             List<ProductsBrand> allProducts = productsBrandRepository.findByBrand(users.getBrand());
 
+            // DB의 품번을 추출
             Set<Products> productNumbersFromDB = allProducts.stream()
                     .map(ProductsBrand::getProducts)
                     .collect(Collectors.toSet());
 
-            // 엑셀에 없는 품번을 데이터베이스에서 삭제
+            // 엑셀의 없는 품번이 DB에는 있다면 DB에서 삭제
             for (Products product : productNumbersFromDB) {
                 if (!productNumbersFromExcel.contains(product.getProductNumber())) {
                     ProductsImage image = productsImageRepository.findByProductId(product.getProductId());
+                    // 삭제하기전 S3 객체 삭제
                     if(image != null) {
                         if (image.getUrl_1() != null) {
                             s3Service.deleteObjectFromS3(image.getUrl_1());
@@ -623,7 +530,7 @@ public class ProductServiceImpl implements ProductService {
                     // URL 일치 여부 확인
                     if (image != null) {
                         // 비교할 URL을 문자열로 저장
-                        StringBuilder errorMessage = new StringBuilder("URLs do not match. Issues with: "+ (index++)+"번째");
+                        StringBuilder errorMessage = new StringBuilder(dto.getProductNumber()+"URLs do not match. Issues with:");
 
                         boolean isValid = true;
 
@@ -667,9 +574,9 @@ public class ProductServiceImpl implements ProductService {
                         productsImageRepository.save(image);
 
                     } else {
-                        throw new IllegalStateException(dto.getProductNumber() +"의이미지가 없습니다.");
+                        throw new IllegalStateException(dto.getProductNumber() +"의 이미지가 없습니다.");
                     }
-                } else {
+                } else { // 엑셀에 작성한 품번이 DB에 존재하는 품번이라면 업데이트
                     existingProduct.setName(dto.getName());
                     existingProduct.setCategory(dto.getCategory());
                     existingProduct.setCategorySub(dto.getCategorySub());
@@ -722,7 +629,7 @@ public class ProductServiceImpl implements ProductService {
                     // URL 일치 여부 확인
                     if (image != null) {
                         // 비교할 URL을 문자열로 저장
-                        StringBuilder errorMessage = new StringBuilder("URLs do not match. Issues with: "+ (index++)+"번째");
+                        StringBuilder errorMessage = new StringBuilder("URLs do not match. Issues with: "+dto.getProductNumber());
 
                         boolean isValid = true;
 
@@ -939,14 +846,14 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public List<ProductColorInfoCardDTO> getProductsInfoByCategory(String categoryId, String categorySubId) {
+    public List<ProductColorInfoCardDTO> getProductsInfoByCategory(String categoryId, String categorySubId) { // 카테고리 검색
         List<Products> productsList = new ArrayList<>();
-        if (categoryId.equals("000") && categorySubId.isEmpty()) {
+        if (categoryId.equals("000") && categorySubId.isEmpty()) { // 받은 카테고리가 000이고 하위 카테고리가 없을 시 전체 검색
             productsList = productsRepository.findAll();
-        } else if (categorySubId.isEmpty()) {
+        } else if (categorySubId.isEmpty()) { // 하위 카테고리가 없을 시 상위 카테고리만 ex) 상의만 검색, 하의만 검색
             String category = CategoryUtils.getCategoryFromCode(categoryId);
             productsList = productsRepository.findByCategory(category);
-        } else {
+        } else { // 상위 카테고리와 하위 카테고리로 검색
             String category = CategoryUtils.getCategoryFromCode(categoryId);
             String categorySub = CategoryUtils.getCategorySubFromCode(categorySubId);
             productsList = productsRepository.findByCategorySub(category, categorySub);
@@ -1063,7 +970,6 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public List<ProductListByBrandDTO> getProductListByBrand(String email) {
-
 
         Users users = userRepository.findByEmail(email).orElse(null);
 
@@ -1186,19 +1092,6 @@ public class ProductServiceImpl implements ProductService {
         Products products = productsRepository.findByProductId(productId);
         ProductInfoDTO productInfoDTO = modelMapper.map(products, ProductInfoDTO.class); // dto 매핑
 
-        productInfoDTO.setProductId(products.getProductId());
-        productInfoDTO.setBrandName(products.getBrandName());
-        productInfoDTO.setName(products.getName());
-        productInfoDTO.setCategory(products.getCategory());
-        productInfoDTO.setCategorySub(products.getCategorySub());
-        productInfoDTO.setPrice(products.getPrice());
-        productInfoDTO.setPriceSale(products.getPriceSale());
-        productInfoDTO.setProductNumber(products.getProductNumber());
-        productInfoDTO.setSeason(products.getSeason());
-        productInfoDTO.setSale(products.getIsSale());
-        productInfoDTO.setColor(products.getColor());
-
-
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         log.info(authentication);
@@ -1235,7 +1128,7 @@ public class ProductServiceImpl implements ProductService {
         String[] productImages = {image.getUrl_1(),image.getUrl_2(),image.getUrl_3(),image.getUrl_4(),image.getUrl_5(),image.getUrl_6()};
         productInfoDTO.setProductImages(productImages);
         productInfoDTO.setProductDetailImage(image.getDetail_url());
-
+        log.info(productInfoDTO);
         return productInfoDTO;
     }
 
