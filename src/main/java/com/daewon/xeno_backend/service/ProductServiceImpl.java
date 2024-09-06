@@ -337,6 +337,221 @@ public class ProductServiceImpl implements ProductService {
                     .map(ProductsBrand::getProducts)
                     .collect(Collectors.toSet());
 
+
+            for (Products product : productNumbersFromDB) {
+                if (productNumbersFromExcel.contains(product.getProductNumber())) {
+                    throw new IllegalStateException("이미 존재하는 품번입니다.");
+                }
+            }
+
+            for (ProductRegisterDTO dto : productList) {
+                int index = 1;
+                Products existingProduct = productsRepository.findByProductNumber(dto.getProductNumber());
+                if (existingProduct == null) {
+                    Products newProduct = Products.builder()
+                            .name(dto.getName())
+                            .brandName(users.getBrand().getBrandName())
+                            .category(dto.getCategory())
+                            .categorySub(dto.getCategorySub())
+                            .price(dto.getPrice())
+                            .priceSale(dto.getPriceSale())
+                            .isSale(dto.isSale())
+                            .season(dto.getSeason())
+                            .productNumber(dto.getProductNumber())
+                            .color(dto.getColors())
+                            .build();
+                    productsRepository.save(newProduct);
+                    ProductsBrand productsBrand = ProductsBrand.builder()
+                            .products(newProduct)
+                            .brand(users.getBrand())
+                            .build();
+                    productsBrandRepository.save(productsBrand);
+
+                    for(ProductSizeDTO size: dto.getSize()){
+                        ProductsOption productsOption = ProductsOption.builder()
+                                .products(newProduct)
+                                .size(size.getSize())
+                                .stock(size.getStock())
+                                .build();
+                        productsOptionRepository.save(productsOption);
+                    }
+
+                    ProductsImage image = productsImageRepository.findByProductNumberAndUsers(dto.getProductNumber(),users);
+
+                    log.info(image);
+                    log.info(dto);
+                    // URL 일치 여부 확인
+                    if (image != null) {
+                        // 비교할 URL을 문자열로 저장
+                        StringBuilder errorMessage = new StringBuilder("URLs do not match. Issues with: "+ (index++)+"번째");
+
+                        boolean isValid = true;
+
+                        // 각 URL 비교 및 일치하지 않는 경우 메시지 추가
+                        if (!equalsIgnoreNullAndEmpty(image.getUrl_1(), dto.getUrl_1())) {
+                            errorMessage.append("url_1, ");
+                            isValid = false;
+                        }
+                        if (!equalsIgnoreNullAndEmpty(image.getUrl_2(), dto.getUrl_2())) {
+                            errorMessage.append("url_2, ");
+                            isValid = false;
+                        }
+                        if (!equalsIgnoreNullAndEmpty(image.getUrl_3(), dto.getUrl_3())) {
+                            errorMessage.append("url_3, ");
+                            isValid = false;
+                        }
+                        if (!equalsIgnoreNullAndEmpty(image.getUrl_4(), dto.getUrl_4())) {
+                            errorMessage.append("url_4, ");
+                            isValid = false;
+                        }
+                        if (!equalsIgnoreNullAndEmpty(image.getUrl_5(), dto.getUrl_5())) {
+                            errorMessage.append("url_5, ");
+                            isValid = false;
+                        }
+                        if (!equalsIgnoreNullAndEmpty(image.getUrl_6(), dto.getUrl_6())) {
+                            errorMessage.append("url_6, ");
+                            isValid = false;
+                        }
+                        if (!equalsIgnoreNullAndEmpty(image.getDetail_url(), dto.getDetail_url())) {
+                            errorMessage.append("detail_url, ");
+                            isValid = false;
+                        }
+
+                        // 오류 메시지에서 마지막 쉼표와 공백 제거
+                        if (!isValid) {
+                            errorMessage.setLength(errorMessage.length() - 2);
+                            throw new IllegalStateException(errorMessage.toString());
+                        }
+
+                        image.setProducts(newProduct);
+                        productsImageRepository.save(image);
+
+                    } else {
+                        throw new IllegalStateException("품번이 맞지 않습니다.");
+                    }
+                } else {
+                    existingProduct.setName(dto.getName());
+                    existingProduct.setCategory(dto.getCategory());
+                    existingProduct.setCategorySub(dto.getCategorySub());
+                    existingProduct.setPrice(dto.getPrice());
+                    existingProduct.setPriceSale(dto.getPriceSale());
+                    existingProduct.setIsSale(dto.isSale());
+                    existingProduct.setSeason(dto.getSeason());
+                    existingProduct.setColor(dto.getColors());
+
+                    productsRepository.save(existingProduct);
+                    List<ProductsOption> productsColorSizes = productsOptionRepository.findByProductId(existingProduct.getProductId());
+                    // 엑셀에서 가져온 사이즈 목록
+                    Set<String> sizesFromExcel = dto.getSize().stream()
+                            .map(sizeDTO -> sizeDTO.getSize())
+                            .collect(Collectors.toSet());
+
+                    // 기존 사이즈 목록을 사이즈 이름으로 매핑
+                    Map<String, ProductsOption> existingColorSizeMap = productsColorSizes.stream()
+                            .collect(Collectors.toMap(ProductsOption::getSize, colorSize -> colorSize));
+
+                    // 엑셀에서 가져온 사이즈를 기반으로 업데이트 및 추가 작업
+                    for (ProductSizeDTO sizeDTO : dto.getSize()) {
+                        String size =sizeDTO.getSize();
+                        ProductsOption existingColorSize = existingColorSizeMap.get(size);
+
+                        if (existingColorSize == null) {
+                            // 기존에 사이즈가 없는 경우 새로 생성
+                            existingColorSize = ProductsOption.builder()
+                                    .products(existingProduct)
+                                    .size(size)
+                                    .stock(sizeDTO.getStock()) // 여기서 사이즈와 함께 초기 재고도 설정
+                                    .build();
+                            productsOptionRepository.save(existingColorSize);
+                        } else {
+                            // 기존 사이즈가 있는 경우 재고 업데이트
+                            existingColorSize.setStock(sizeDTO.getStock());
+                            productsOptionRepository.save(existingColorSize);
+                        }
+                    }
+
+                    // 엑셀 데이터에 없는 사이즈 삭제
+                    for (ProductsOption colorSize : productsColorSizes) {
+                        if (!sizesFromExcel.contains(colorSize.getSize())) {
+                            productsOptionRepository.delete(colorSize);
+                        }
+                    }
+
+                    ProductsImage image = productsImageRepository.findByProductNumberAndUsers(dto.getProductNumber(),users);
+
+                    // URL 일치 여부 확인
+                    if (image != null) {
+                        // 비교할 URL을 문자열로 저장
+                        StringBuilder errorMessage = new StringBuilder("URLs do not match. Issues with: "+ (index++)+"번째");
+
+                        boolean isValid = true;
+
+                        // 각 URL 비교 및 일치하지 않는 경우 메시지 추가
+                        if (!equalsIgnoreNullAndEmpty(image.getUrl_1(), dto.getUrl_1())) {
+                            errorMessage.append("url_1, ");
+                            isValid = false;
+                        }
+                        if (!equalsIgnoreNullAndEmpty(image.getUrl_2(), dto.getUrl_2())) {
+                            errorMessage.append("url_2, ");
+                            isValid = false;
+                        }
+                        if (!equalsIgnoreNullAndEmpty(image.getUrl_3(), dto.getUrl_3())) {
+                            errorMessage.append("url_3, ");
+                            isValid = false;
+                        }
+                        if (!equalsIgnoreNullAndEmpty(image.getUrl_4(), dto.getUrl_4())) {
+                            errorMessage.append("url_4, ");
+                            isValid = false;
+                        }
+                        if (!equalsIgnoreNullAndEmpty(image.getUrl_5(), dto.getUrl_5())) {
+                            errorMessage.append("url_5, ");
+                            isValid = false;
+                        }
+                        if (!equalsIgnoreNullAndEmpty(image.getUrl_6(), dto.getUrl_6())) {
+                            errorMessage.append("url_6, ");
+                            isValid = false;
+                        }
+                        if (!equalsIgnoreNullAndEmpty(image.getDetail_url(), dto.getDetail_url())) {
+                            errorMessage.append("detail_url ");
+                            isValid = false;
+                        }
+
+                        // 오류 메시지에서 마지막 쉼표와 공백 제거
+                        if (!isValid) {
+                            errorMessage.setLength(errorMessage.length() - 2);
+                            throw new IllegalStateException(errorMessage.toString());
+                        }
+                    } else {
+                        throw new IllegalStateException("UploadImage not found. Operation cancelled.");
+                    }
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            // Handle the exception
+        }
+    }
+
+    @Transactional
+    public void updateProductsFromExcel(MultipartFile excel) {
+        try {
+
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserName = authentication.getName();
+            Users users = userRepository.findByEmail(currentUserName).orElse(null);
+
+            List<ProductRegisterDTO> productList = excelService.parseExcelFile(excel);
+            // 엑셀에서 가져온 품번을 추출
+            Set<String> productNumbersFromExcel = productList.stream()
+                    .map(ProductRegisterDTO::getProductNumber)
+                    .collect(Collectors.toSet());
+
+            List<ProductsBrand> allProducts = productsBrandRepository.findByBrand(users.getBrand());
+
+            Set<Products> productNumbersFromDB = allProducts.stream()
+                    .map(ProductsBrand::getProducts)
+                    .collect(Collectors.toSet());
+
             // 엑셀에 없는 품번을 데이터베이스에서 삭제
             for (Products product : productNumbersFromDB) {
                 if (!productNumbersFromExcel.contains(product.getProductNumber())) {

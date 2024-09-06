@@ -54,6 +54,8 @@ public interface ProductService {
 
     void saveProductsFromExcel(MultipartFile excel);
 
+    void updateProductsFromExcel(MultipartFile excel);
+
     List<UploadImageReadDTO> getUploadImageAll();
 
     UploadImageReadDTO getUploadImageByProductNumber(String productNumber);

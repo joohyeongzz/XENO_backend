@@ -223,6 +223,13 @@ public class ProductController {
         return ResponseEntity.ok("\"성공\"");
     }
 
+    @PostMapping(value = "/update", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> updateProduct(
+            @RequestPart(name = "excel") MultipartFile excel) {
+        productService.updateProductsFromExcel(excel);
+        return ResponseEntity.ok("\"성공\"");
+    }
+
     @PutMapping(value = "/update/stock", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> updateProductStock(@RequestPart(name = "excel") MultipartFile excel) {
         // Check if the file is empty
