@@ -24,6 +24,6 @@ public interface ProductsBrandRepository extends JpaRepository<ProductsBrand, Lo
     @Query("SELECT COUNT(po) FROM ProductsOption po " +
             "JOIN Products p ON po.products = p " +
             "JOIN ProductsBrand pb ON p = pb.products " +
-            "WHERE po.stock = 0 AND pb.brand = :brand")
+            "WHERE po.stock = 0 AND pb.brand = :brand") // 자신이 판매중인 상품의 ProductOption의 stock이 0인걸 찾기
     long countBySoldOut(Brand brand);
 }
