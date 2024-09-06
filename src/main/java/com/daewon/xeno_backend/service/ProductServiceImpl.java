@@ -534,7 +534,8 @@ public class ProductServiceImpl implements ProductService {
 
     @Transactional
     public void updateProductsFromExcel(MultipartFile excel) {
-        try {
+       int index = 1;
+             try {
 
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String currentUserName = authentication.getName();
@@ -584,7 +585,7 @@ public class ProductServiceImpl implements ProductService {
             }
 
             for (ProductRegisterDTO dto : productList) {
-                int index = 1;
+
                 Products existingProduct = productsRepository.findByProductNumber(dto.getProductNumber());
                 if (existingProduct == null) {
                     Products newProduct = Products.builder()
@@ -666,7 +667,7 @@ public class ProductServiceImpl implements ProductService {
                         productsImageRepository.save(image);
 
                     } else {
-                        throw new IllegalStateException("품번이 맞지 않습니다.");
+                        throw new IllegalStateException(dto.getProductNumber() +"의이미지가 없습니다.");
                     }
                 } else {
                     existingProduct.setName(dto.getName());
@@ -761,7 +762,7 @@ public class ProductServiceImpl implements ProductService {
                             throw new IllegalStateException(errorMessage.toString());
                         }
                     } else {
-                        throw new IllegalStateException("UploadImage not found. Operation cancelled.");
+                        throw new IllegalStateException(dto.getProductNumber() +"의 UploadImage not found. Operation cancelled.");
                     }
                 }
             }

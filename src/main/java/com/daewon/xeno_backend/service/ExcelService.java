@@ -43,6 +43,8 @@ import java.time.Month;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static org.apache.poi.ss.usermodel.CellType.STRING;
+
 @Service
 @Log4j2
 @RequiredArgsConstructor
@@ -65,7 +67,8 @@ public class ExcelService {
         try (InputStream fis = excel.getInputStream(); Workbook workbook = new XSSFWorkbook(fis)) {
             Sheet sheet = workbook.getSheetAt(0);
             for (Row row : sheet) {
-                if (row.getRowNum() == 0 || row.getCell(0) == null) continue; // Skip header row
+                if (row.getRowNum() == 0 || row.getCell(0) == null
+                       ) continue; // Skip header row
                 int rowIndex = 0; // 반복 횟수를 추적하기 위한 변수 선언
                 ProductRegisterDTO product = new ProductRegisterDTO();
                 log.info(rowIndex+"번쨰"+row.getCell(0));
@@ -77,10 +80,14 @@ public class ExcelService {
                     switch (cell.getCellType()) {
                         case STRING:
                             productNumber = cell.getStringCellValue();
+                            if(productNumber.isEmpty()) {
+                                continue;
+                            }
                             break;
                         case NUMERIC:
                             // Convert numeric value to string
-                            productNumber = String.valueOf((int) cell.getNumericCellValue());
+                            log.info(productNumber);
+                            productNumber = String.valueOf((long)cell.getNumericCellValue());
                             break;
                         default:
                             // Handle other types if necessary, or set a default value
@@ -100,6 +107,7 @@ public class ExcelService {
                 product.setColors(row.getCell(6).getStringCellValue());
                 String sizeString = getCellValue(row.getCell(7)); // Comma-separated sizes
                 String stockString = getCellValue(row.getCell(8)); // Comma-separated stocks
+                log.info(stockString);
 
                 String[] sizes = sizeString.split(",");
                 String[] stocks = stockString.split(",");
@@ -216,6 +224,15 @@ public class ExcelService {
             headerCell.setCellValue(headerNames[i]);
         }
 
+        CellStyle textStyle = workbook.createCellStyle();
+        DataFormat format = workbook.createDataFormat();
+        textStyle.setDataFormat(format.getFormat("@")); // Text format
+
+        for (int rowIndex = 1; rowIndex <= 100; rowIndex++) { // 예를 들어 100행 정도를 처리
+            Row row = sheet.createRow(rowIndex); // 행 생성
+            Cell stockCell = row.createCell(8); // '재고' 열 셀 생성
+            stockCell.setCellStyle(textStyle); // 텍스트 서식 적용
+        }
         // 카테고리와 서브 카테고리 데이터
         String[] categories = {"상의", "하의", "아우터"};
 
@@ -466,7 +483,7 @@ public class ExcelService {
                 if (row.getRowNum() == 0) continue;
 
                 // 비어 있는 행 건너뜀
-                if (row.getCell(0) == null || row.getCell(0).getCellType() == CellType.STRING) {
+                if (row.getCell(0) == null || row.getCell(0).getCellType() == STRING) {
                     throw new RuntimeException("Product option ID not found in row " + row.getRowNum());
                 }
 
@@ -593,7 +610,7 @@ public class ExcelService {
                 if (cell12.getCellType() == CellType.NUMERIC) {
                     double numericValue = cell12.getNumericCellValue();
                     trackingNumber = String.valueOf((long)numericValue);
-                } else if (cell12.getCellType() == CellType.STRING) {
+                } else if (cell12.getCellType() == STRING) {
                     String stringValue = cell12.getStringCellValue();
                     trackingNumber = stringValue;
                 } else {
@@ -860,7 +877,7 @@ public class ExcelService {
                         !row.getCell(13).getStringCellValue().equals("확인")) continue;
 
                 // 비어 있는 행 건너뜀
-                if (row.getCell(0) == null || row.getCell(0).getCellType() == CellType.STRING) {
+                if (row.getCell(0) == null || row.getCell(0).getCellType() == STRING) {
                     throw new RuntimeException("Product option ID not found in row " + row.getRowNum());
                 }
 
@@ -870,7 +887,7 @@ public class ExcelService {
                 if (cell.getCellType() == CellType.NUMERIC) {
                     double numericValue = cell.getNumericCellValue();
                         orderId = (long)numericValue;
-                } else if (cell.getCellType() == CellType.STRING) {
+                } else if (cell.getCellType() == STRING) {
                     String stringValue = cell.getStringCellValue();
                     orderId = Long.parseLong(stringValue);
 
