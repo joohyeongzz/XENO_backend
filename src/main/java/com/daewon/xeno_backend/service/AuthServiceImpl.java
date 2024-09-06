@@ -51,8 +51,6 @@ public class AuthServiceImpl implements AuthService {
 
     private final BrandApprovalRepository brandApprovalRepository;
 
-    private final EmailService emailService;
-
 
     @Override
     @Transactional

@@ -128,7 +128,7 @@ public class CustomSecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
         // 접근할 URL을 지정하여 처리... "*" 는 모든 주소로의 접근 허용. 대상 지정하면 지정 대상만 접근 가능...
-        corsConfiguration.setAllowedOriginPatterns(Arrays.asList("http://localhost:3000","https://xeno-brand-frontend.vercel.app"));
+        corsConfiguration.setAllowedOriginPatterns(Arrays.asList("http://localhost:3000","https://xeno-bo-frontend.vercel.app"));
         corsConfiguration.setAllowedMethods(Arrays.asList("HEAD","GET","POST","PUT","DELETE"));
         corsConfiguration.setAllowedHeaders(Arrays.asList("Authorization","Cache-Control","Content-Type"));
         corsConfiguration.setAllowCredentials(true);
