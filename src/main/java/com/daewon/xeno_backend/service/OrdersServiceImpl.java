@@ -433,16 +433,28 @@ public class OrdersServiceImpl implements OrdersService {
 
     @Override
     public void cancelOrder(OrderCancelDTO dto) {
+        // 주어진 주문 ID로 주문을 조회합니다.
         Orders orders = ordersRepository.findById(dto.getOrderId()).orElse(null);
+
+        // RestTemplate을 생성하여 HTTP 요청을 보냅니다.
         RestTemplate restTemplate = new RestTemplate();
+
+        // 요청 헤더를 설정합니다. (헤더 설정 메서드는 별도로 정의되어야 함)
         HttpHeaders headers = getHeaders();
+
+        // 요청 파라미터를 설정합니다.
         JSONObject params = new JSONObject();
-        params.put("cancelReason", dto.getReason());
-        params.put("cancelAmount", orders.getAmount());
+        params.put("cancelReason", dto.getReason()); // 취소 사유
+        params.put("cancelAmount", orders.getAmount()); // 취소 금액
+
+        // 결제 취소 API의 URL을 생성합니다.
         String url = "https://api.tosspayments.com/v1/payments/" + orders.getPaymentKey() + "/cancel";
+
+        // 요청 본문과 헤더를 포함한 HttpEntity 객체를 생성합니다.
         HttpEntity<String> requestEntity = new HttpEntity<>(params.toString(), headers);
 
         try {
+            // 결제 취소 API에 POST 요청을 보냅니다.
             ResponseEntity<Map> response = restTemplate.exchange(
                     url,
                     HttpMethod.POST,
@@ -450,17 +462,19 @@ public class OrdersServiceImpl implements OrdersService {
                     Map.class
             );
 
-            // Check the response and update order status
+            // 응답 상태 코드가 2xx 성공 범위인 경우
             if (response.getStatusCode().is2xxSuccessful()) {
-                // Update order status to "환불 완료" (Refunded)
+                // 주문 상태를 "결제 취소"로 업데이트합니다.
                 orders.setStatus("결제 취소");
-                ordersRepository.save(orders);
-                log.info("Order status updated to 환불 완료 for order ID: " + dto.getOrderId());
+                ordersRepository.save(orders); // 변경된 주문 상태를 저장합니다.
+                log.info("주문 ID: " + dto.getOrderId() + "의 상태가 결제 취소로 업데이트되었습니다.");
             } else {
-                log.error("Failed to cancel payment. Response code: " + response.getStatusCode());
+                // 결제 취소 실패 시, 응답 코드와 함께 로그를 기록합니다.
+                log.error("결제 취소 실패. 응답 코드: " + response.getStatusCode());
             }
         } catch (Exception e) {
-            log.error("Error occurred while canceling the payment: ", e);
+            // 예외가 발생한 경우, 오류 메시지와 함께 로그를 기록합니다.
+            log.error("결제 취소 중 오류 발생: ", e);
         }
     }
 

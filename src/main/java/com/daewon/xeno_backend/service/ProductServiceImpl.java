@@ -1207,7 +1207,7 @@ public class ProductServiceImpl implements ProductService {
         }
 
         Users users = optionalUser.get();
-        ProductsImage image = productsImageRepository.findByProductNumberAndUsersAndProductsIsNotNull(productNumber, users);
+        ProductsImage image = productsImageRepository.findByProductNumberAndUsersAndProductsIsNotNull(productNumber, users.getBrand());
 
         return convertToUploadImageReadDTO(image);
     }

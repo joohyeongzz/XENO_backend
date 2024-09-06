@@ -525,6 +525,7 @@ public class ExcelService {
         }
     }
 
+    // 결제 완료 엑셀 다운 받기
     public byte[] generateOrdersExcelFile() throws IOException {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -535,7 +536,7 @@ public class ExcelService {
             throw new RuntimeException("User not found: " + currentUserName);
         }
 
-        Users users = optionalUser.get();
+        Users users = optionalUser.get(); // 유저 찾기
 
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Sheet1");
@@ -567,13 +568,13 @@ public class ExcelService {
 
         int rowIndex = 1;
 
-        List<ProductsBrand> products = productsBrandRepository.findByBrand(users.getBrand());
+        List<ProductsBrand> products = productsBrandRepository.findByBrand(users.getBrand()); // 내가 팔고있는 상품 찾기
         log.info(products);
         for(ProductsBrand productsBrand : products) {
-            List<ProductsOption> productsOptions = productsOptionRepository.findByProductId(productsBrand.getProducts().getProductId());
+            List<ProductsOption> productsOptions = productsOptionRepository.findByProductId(productsBrand.getProducts().getProductId()); // 상품의 옵션 찾기
             log.info(productsOptions);
             for(ProductsOption productsOption : productsOptions) {
-                List<Orders> ordersList = ordersRepository.findByStatusAndProductsOption("결제 완료",productsOption);
+                List<Orders> ordersList = ordersRepository.findByStatusAndProductsOption("결제 완료",productsOption); // 결제 완료인 주문 찾기
                 log.info(ordersList);
                 for(Orders order : ordersList) {
                     Row row = sheet.createRow(rowIndex++);
@@ -640,7 +641,7 @@ public class ExcelService {
                 String carrierId = cell11.getStringCellValue();
 
 
-                String url = "https://apis.tracker.delivery/graphql";
+                String url = "https://apis.tracker.delivery/graphql"; // api 요청 주소
 
                 // HTTP 헤더 설정
                 HttpHeaders headers = new HttpHeaders();
@@ -689,11 +690,14 @@ public class ExcelService {
                         if (errorsNode.isArray() && errorsNode.size() > 0) {
                             JsonNode firstError = errorsNode.get(0);
                             String errorMessage = firstError.path("message").asText();
-                            log.error("Error message: " + errorMessage);
+                            log.error("Error message: " + errorMessage); // 에러 메시지 띄우기
                         } else {
+                            // 해당 행에 해당하는 주문 찾기
                             Orders order = ordersRepository.findByOrderId((long)row.getCell(0).getNumericCellValue()).orElse(null);
 
                             log.info(order);
+
+                            // 주문이 배송사에 등록됐는지 여부 확인
                             DeliveryTrack deliveryTrack = deliveryTrackRepository.findByOrders(order);
                             if(deliveryTrack != null) {
                                 throw new RemoteException("이미 존재하는 배송 정보입니다.");
@@ -765,6 +769,7 @@ public class ExcelService {
 
         LocalDateTime startDateTime = startDate.atStartOfDay();
         LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+        // 내가 팔았던 주문 기간별 조회
         List<Orders> ordersList = ordersRepository.findByBrandAndDateRange(users.getBrand(),startDateTime,endDateTime);
         log.info(ordersList);
         for(Orders order : ordersList) {
@@ -876,6 +881,7 @@ public class ExcelService {
         }
     }
 
+    // 환불 요청 엑셀 업로드
     @Transactional
     public void parseCancelOrderExcelFile(MultipartFile excel) throws IOException {
         if (excel.isEmpty()) {
@@ -900,7 +906,7 @@ public class ExcelService {
                 // 첫 번째 행(헤더)은 건너뜀
                 if (row.getRowNum() == 0) continue;
                 if(row.getCell(13) == null || row.getCell(13).getStringCellValue().trim().isEmpty() ||
-                        !row.getCell(13).getStringCellValue().equals("확인")) continue;
+                        !row.getCell(13).getStringCellValue().equals("확인")) continue; // 상품 확인 여부에 확인이라 적지 않으면 건너뛰기
 
                 // 비어 있는 행 건너뜀
                 if (row.getCell(0) == null || row.getCell(0).getCellType() == STRING) {
@@ -925,7 +931,7 @@ public class ExcelService {
                 dto.setOrderId(orderId);
                 dto.setReason(reason);
 
-                ordersService.cancelOrder(dto);
+                ordersService.cancelOrder(dto); // 결제 취소 메서드
 
             }
         }
