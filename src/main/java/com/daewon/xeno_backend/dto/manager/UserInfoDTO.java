@@ -13,4 +13,5 @@ public class UserInfoDTO {
     private Long userId;
     private String email;
     private String name;
+    private Long brandId;
 }

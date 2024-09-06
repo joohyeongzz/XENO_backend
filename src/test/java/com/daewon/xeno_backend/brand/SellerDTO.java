@@ -9,7 +9,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class SellerDTO {
+public class BrandDTO {
 
     private String email;
     private String password;

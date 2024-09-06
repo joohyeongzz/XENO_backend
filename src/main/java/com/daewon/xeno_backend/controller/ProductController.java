@@ -1,6 +1,9 @@
 package com.daewon.xeno_backend.controller;
 
+import com.daewon.xeno_backend.domain.ProductsOption;
 import com.daewon.xeno_backend.dto.UploadImageReadDTO;
+import com.daewon.xeno_backend.dto.order.OrderProductDTO;
+import com.daewon.xeno_backend.dto.order.OrderProductIdsReadDTO;
 import com.daewon.xeno_backend.dto.page.PageInfinityResponseDTO;
 import com.daewon.xeno_backend.dto.page.PageRequestDTO;
 import com.daewon.xeno_backend.dto.page.PageResponseDTO;
@@ -24,6 +27,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @Log4j2
@@ -34,10 +38,34 @@ public class ProductController {
     private final ProductService productService;
     private final ExcelService excelService;
 
+    @PostMapping("/option/ids/read")
+    public ResponseEntity<?> productOptionIdsRead(@RequestBody List<OrderProductIdsReadDTO> productOptionInfos) {
+
+        log.info(productOptionInfos);
+
+        List<OrderProductIdsReadDTO> products = productService.productOptionIdsRead(productOptionInfos);
+
+        log.info(products);
+
+        try {
+            return ResponseEntity.ok(products);
+        } catch (Exception e) {
+            return ResponseEntity.status(404).body("유효하지 않은 상품입니다.");
+        }
+    }
+
     @GetMapping("/read")
     public ResponseEntity<ProductInfoDTO> readProduct(@RequestParam("productId") Long productId) throws IOException {
         log.info(productId);
         ProductInfoDTO productInfoDTO = productService.getProductInfo(productId);
+
+        return ResponseEntity.ok(productInfoDTO);
+    }
+
+    @GetMapping("/read-by-brand")
+    public ResponseEntity<ProductInfoDTO> readProductByBrand(@RequestParam("productId") Long productId) throws IOException {
+        log.info(productId);
+        ProductInfoDTO productInfoDTO = productService.getProductInfoByBrand(productId);
 
         return ResponseEntity.ok(productInfoDTO);
     }
@@ -98,13 +126,13 @@ public class ProductController {
     }
 
 
-    @GetMapping("/seller/read")
-    public ResponseEntity<?> getProductListBySeller(@AuthenticationPrincipal UserDetails userDetails) {
+    @GetMapping("/brand/read")
+    public ResponseEntity<?> getProductListByBrand(@AuthenticationPrincipal UserDetails userDetails) {
         try {
             String userEmail = userDetails.getUsername();
 
             log.info("orderUserEmail : " + userEmail);
-            List<ProductListBySellerDTO> dtoList = productService.getProductListBySeller(userEmail);
+            List<ProductListByBrandDTO> dtoList = productService.getProductListByBrand(userEmail);
 
             return ResponseEntity.ok(dtoList);
         } catch (Exception e) {
@@ -195,6 +223,13 @@ public class ProductController {
         return ResponseEntity.ok("\"성공\"");
     }
 
+    @PostMapping(value = "/update", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> updateProduct(
+            @RequestPart(name = "excel") MultipartFile excel) {
+        productService.updateProductsFromExcel(excel);
+        return ResponseEntity.ok("\"성공\"");
+    }
+
     @PutMapping(value = "/update/stock", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> updateProductStock(@RequestPart(name = "excel") MultipartFile excel) {
         // Check if the file is empty
@@ -268,6 +303,11 @@ public class ProductController {
             outputStream.write(excelFile);
             outputStream.flush();
         }
+    }
+
+    @GetMapping("/sold-out-count")
+    public long getSoldOutProductsCount() {
+        return productService.getSoldOutProductsCount();
     }
 
 

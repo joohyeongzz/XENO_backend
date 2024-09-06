@@ -18,7 +18,7 @@ public class ReviewInfoDTO {
     private boolean isReview;
     private double star;
     private int replyIndex;
-    private byte[] reviewImage;
+    private String reviewImage;
     private String createAt;
     private String color;
 
