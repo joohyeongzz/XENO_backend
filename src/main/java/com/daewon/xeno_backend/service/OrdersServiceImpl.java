@@ -40,6 +40,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.Month;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -121,6 +123,9 @@ public class OrdersServiceImpl implements OrdersService {
                         .amount(dto.getAmount())
                         .build();
                 savedOrders.add(ordersRepository.save(orders));
+                ProductsOption productsOption = productsOptionRepository.findByProductOptionId(dto.getProductOptionId());
+                productsOption.setStock(productsOption.getStock() - dto.getQuantity());
+                productsOptionRepository.save(productsOption);
             }
         }
 
@@ -498,6 +503,123 @@ public class OrdersServiceImpl implements OrdersService {
         Orders orders = ordersRepository.findByOrderIdAndUserId(orderId, users);
         orders.setStatus("구매 확정");
         ordersRepository.save(orders);
-
     }
+    public List<OrdersCountDTO> getOrdersCountByPaymentAndRefund() {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        String currentUserName = authentication.getName();
+        log.info("이름:"+currentUserName);
+        Users users = userRepository.findByEmail(currentUserName)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없음"));
+        long refundCount = ordersRepository.countByStatus("환불 요청", users.getBrand()); // 환불 요청된 상품 수
+        long paymentCompleteCount = ordersRepository.countByStatus("결제 취소", users.getBrand());
+
+        List<OrdersCountDTO> ordersCountDTOList = new ArrayList<>();
+        OrdersCountDTO ordersCountDTO = new OrdersCountDTO();
+        ordersCountDTO.setStatus("refund");
+        ordersCountDTO.setCount(refundCount);
+        ordersCountDTOList.add(ordersCountDTO);
+        ordersCountDTO = new OrdersCountDTO();
+        ordersCountDTO.setStatus("paymentComplete");
+        ordersCountDTO.setCount(paymentCompleteCount);
+        ordersCountDTOList.add(ordersCountDTO);
+        return ordersCountDTOList;
+    }
+
+    @Override
+    public List<OrdersSalesAmountDTO> getBrandSalesAmount(int year) {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserName = authentication.getName();
+        log.info("이름: " + currentUserName);
+
+        Users users = userRepository.findByEmail(currentUserName)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없음"));
+
+        LocalDateTime startDateTime = LocalDateTime.of(year, Month.JANUARY, 1, 0, 0, 0);
+        LocalDateTime endDateTime = LocalDateTime.of(year, Month.DECEMBER, 31, 23, 59, 59);
+
+        List<Orders> orders = ordersRepository.findByBrandAndDateRange(users.getBrand(), startDateTime, endDateTime);
+
+        // 월별 매출 데이터 집계 및 정렬
+        return getMonthlySalesAmount(orders);
+    }
+
+    public List<OrdersSalesAmountDTO> getMonthlySalesAmount(List<Orders> orders) {
+        // 날짜 포맷터를 정의합니다.
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM");
+
+        // 월별로 amount를 집계합니다.
+        Map<String, Long> monthlySalesMap = orders.stream()
+                .collect(Collectors.groupingBy(
+                        order -> order.getCreateAt().format(formatter), // 월별 포맷
+                        Collectors.summingLong(Orders::getAmount) // amount 합계
+                ));
+
+        // 월별 집계 결과를 DTO 리스트로 변환합니다.
+        List<OrdersSalesAmountDTO> ordersSalesAmountDTOList = monthlySalesMap.entrySet().stream()
+                .map(entry -> new OrdersSalesAmountDTO(
+                        entry.getKey(), // "yyyy-MM"
+                        entry.getValue() // 월별 총 매출액
+                ))
+                .sorted(Comparator.comparing(OrdersSalesAmountDTO::getDate)) // 월 순서로 정렬
+                .collect(Collectors.toList());
+
+        return ordersSalesAmountDTOList;
+    }
+
+    @Override
+    public List<OrdersSalesQuantityDTO> getBrandSalesCount(int year) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserName = authentication.getName();
+        log.info("이름: " + currentUserName);
+
+        Users users = userRepository.findByEmail(currentUserName)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없음"));
+
+        LocalDateTime startDateTime = LocalDateTime.of(year, Month.JANUARY, 1, 0, 0, 0);
+        LocalDateTime endDateTime = LocalDateTime.of(year, Month.DECEMBER, 31, 23, 59, 59);
+
+        List<Orders> orders = ordersRepository.findByBrandAndDateRange(users.getBrand(), startDateTime, endDateTime);
+        return getMonthlySalesCount(orders);
+    }
+
+    public List<OrdersSalesQuantityDTO> getMonthlySalesCount(List<Orders> orders) {
+        // 날짜 포맷터를 정의합니다.
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM");
+
+        // 월별로 quantity를 집계합니다.
+        Map<String, Long> monthlySalesMap = orders.stream()
+                .collect(Collectors.groupingBy(
+                        order -> order.getCreateAt().format(formatter), // 월별 포맷
+                        Collectors.summingLong(Orders::getQuantity) // quantity 합계
+                ));
+
+        // 월별 집계 결과를 DTO 리스트로 변환합니다.
+        List<OrdersSalesQuantityDTO> ordersSalesAmountDTOList = monthlySalesMap.entrySet().stream()
+                .map(entry -> new OrdersSalesQuantityDTO(
+                        entry.getKey(), // "yyyy-MM"
+                        entry.getValue() // 월별 총 수량
+                ))
+                .sorted(Comparator.comparing(OrdersSalesQuantityDTO::getDate)) // 월 순서로 정렬
+                .collect(Collectors.toList());
+
+        return ordersSalesAmountDTOList;
+    }
+
+    @Override
+    public List<OrdersTopSellingProductsDTO> getBrandTop10SellingProducts() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserName = authentication.getName();
+        log.info("이름: " + currentUserName);
+
+        Users users = userRepository.findByEmail(currentUserName)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없음"));
+        Pageable pageable = PageRequest.of(0, 10); // 페이지 인덱스 0, 제한 10
+
+        return  ordersRepository.findTopSellingProducts(users.getBrand(), pageable);
+    }
+
+
 }

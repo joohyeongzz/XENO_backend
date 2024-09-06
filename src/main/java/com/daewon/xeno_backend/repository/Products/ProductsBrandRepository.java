@@ -21,4 +21,9 @@ public interface ProductsBrandRepository extends JpaRepository<ProductsBrand, Lo
     @Query("SELECT p FROM ProductsBrand p where p.products.productId = :productId and p.brand = :brand")
     ProductsBrand findByProductIdAndBrand(Long productId, Brand brand);
 
+    @Query("SELECT COUNT(po) FROM ProductsOption po " +
+            "JOIN Products p ON po.products = p " +
+            "JOIN ProductsBrand pb ON p = pb.products " +
+            "WHERE po.stock = 0 AND pb.brand = :brand")
+    long countBySoldOut(Brand brand);
 }

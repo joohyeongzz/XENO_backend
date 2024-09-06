@@ -298,6 +298,11 @@ public class ProductController {
         }
     }
 
+    @GetMapping("/sold-out-count")
+    public long getSoldOutProductsCount() {
+        return productService.getSoldOutProductsCount();
+    }
+
 
 }
 
