@@ -41,6 +41,7 @@ jobs:
             echo "${{ secrets.SSH_PEM_KEY }}" >> $HOME/key.pem
             chmod 400 $HOME/key.pem
             ssh -i $HOME/key.pem -o StrictHostKeyChecking=no ubuntu@3.36.106.72<< EOF
+              sudo chmod 666 /var/run/docker.sock
               docker pull joohyeongzz/xenoback:latest
               chmod 777 ./deploy.sh
               ./deploy.sh
