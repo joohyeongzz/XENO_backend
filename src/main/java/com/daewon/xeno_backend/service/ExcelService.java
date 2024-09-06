@@ -61,6 +61,7 @@ public class ExcelService {
     private final OrdersRefundRepository ordersRefundRepository;
     private final OrdersService ordersService;
 
+    // 엑셀 파일 읽기
     public List<ProductRegisterDTO> parseExcelFile(MultipartFile excel) throws IOException {
         List<ProductRegisterDTO> productList = new ArrayList<>();
 
@@ -68,34 +69,34 @@ public class ExcelService {
             Sheet sheet = workbook.getSheetAt(0);
             for (Row row : sheet) {
                 if (row.getRowNum() == 0 || row.getCell(0) == null
-                       ) continue; // Skip header row
+                       ) continue; // 헤더 스킵, 품번 null이면 스킵
                 int rowIndex = 0; // 반복 횟수를 추적하기 위한 변수 선언
                 ProductRegisterDTO product = new ProductRegisterDTO();
                 log.info(rowIndex+"번쨰"+row.getCell(0));
 
-                Cell cell = row.getCell(0); // Assuming column 0 for Product Number
+                Cell cell = row.getCell(0); // A열 품번
                 String productNumber = "";
 
-                if (cell != null) {
+                if (cell != null) { // 품번이 null 이 아닌 경우
                     switch (cell.getCellType()) {
                         case STRING:
                             productNumber = cell.getStringCellValue();
-                            if(productNumber.isEmpty()) {
+                            if(productNumber.isEmpty()) { // 품번이 공백일 경우 스킵
                                 continue;
                             }
                             break;
                         case NUMERIC:
-                            // Convert numeric value to string
+                            // 숫자일 경우 String으로 변경
                             log.info(productNumber);
                             productNumber = String.valueOf((long)cell.getNumericCellValue());
                             break;
                         default:
-                            // Handle other types if necessary, or set a default value
                             productNumber = "";
                             break;
                     }
                 }
 
+                // 각 열에 해당하는 정보를 DTD에 매핑
                 product.setProductNumber(productNumber);
                 product.setName(row.getCell(1).getStringCellValue());
                 product.setCategory(row.getCell(2).getStringCellValue());
@@ -109,7 +110,9 @@ public class ExcelService {
                 String stockString = getCellValue(row.getCell(8)); // Comma-separated stocks
                 log.info(stockString);
 
+                // 사이즈와 재고는 ,를 구분자로 새 배열 생성
                 String[] sizes = sizeString.split(",");
+
                 String[] stocks = stockString.split(",");
 
                 if (sizes.length != stocks.length) {
@@ -136,9 +139,11 @@ public class ExcelService {
 
                     sizeDTOs.add(sizeDTO);
                 }
+
                 product.setSize(sizeDTOs);
 
                 product.setUrl_1(row.getCell(9).getStringCellValue());
+
                 Cell cell12 = row.getCell(10);
                 Cell cell13 = row.getCell(11);
                 Cell cell14 = row.getCell(12);
@@ -179,6 +184,7 @@ public class ExcelService {
         }
     }
 
+    // 내 상품 엑셀 다운로드
     public byte[] generateExcelFile() throws IOException {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -188,7 +194,7 @@ public class ExcelService {
             throw new RuntimeException("User not found: " + currentUserName);
         }
 
-        Users users = optionalUser.get();
+        Users users = optionalUser.get(); // 유저 찾기
 
         List<ProductsBrand> products = productsBrandRepository.findByBrand(users.getBrand());
 
@@ -231,10 +237,10 @@ public class ExcelService {
         for (int rowIndex = 1; rowIndex <= 100; rowIndex++) { // 예를 들어 100행 정도를 처리
             Row row = sheet.createRow(rowIndex); // 행 생성
             Cell stockCell = row.createCell(8); // '재고' 열 셀 생성
-            stockCell.setCellStyle(textStyle); // 텍스트 서식 적용
+            stockCell.setCellStyle(textStyle); // 텍스트 서식 적용, 적용 안할 시 나중에 엑셀 등록할 때 오류 생김
         }
         // 카테고리와 서브 카테고리 데이터
-        String[] categories = {"상의", "하의", "아우터"};
+        String[] categories = {"상의", "하의", "아우터", "액세서리"};
 
         // 카테고리 드롭다운 설정
         DataValidationHelper validationHelper = sheet.getDataValidationHelper();
@@ -247,6 +253,7 @@ public class ExcelService {
         int rowIndex = 1;
         for (ProductsBrand product : products) {
             Row row = sheet.createRow(rowIndex++);
+            // 셀 만들고 엔티티의 각 컬럼들을 매핑
             row.createCell(0).setCellValue(product.getProducts().getProductNumber());
             row.createCell(1).setCellValue(product.getProducts().getName());
             row.createCell(2).setCellValue(product.getProducts().getCategory());
@@ -257,7 +264,7 @@ public class ExcelService {
 
             List<ProductsOption> productsOptions = productsOptionRepository.findByProductId(product.getProducts().getProductId());
 
-            // Collect sizes and stocks
+            // 재고 배열 및 사이즈 배열의 각 배열 사이 ,를 넣어 하나의 String으로 저장
             String sizes = productsOptions.stream()
                     .map(ProductsOption::getSize)
                     .collect(Collectors.joining(","));
@@ -265,7 +272,6 @@ public class ExcelService {
                     .map(option -> String.valueOf(option.getStock()))
                     .collect(Collectors.joining(","));
 
-            // Set sizes and stocks in the row
             row.createCell(7).setCellValue(sizes);
             row.createCell(8).setCellValue(stocks);
 
@@ -290,6 +296,7 @@ public class ExcelService {
         }
     }
 
+    // 새 액셀 템플릿 다운
     public byte[] newGenerateExcelFile() throws IOException {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -402,6 +409,8 @@ public class ExcelService {
         }
 
 
+        // 재고 제외 수정 못하게 잠금 걸기
+
         CellStyle lockedCellStyle = workbook.createCellStyle();
         lockedCellStyle.setLocked(true);
 
@@ -451,6 +460,7 @@ public class ExcelService {
         }
     }
 
+    // 재고 수정 엑셀 업로드
     @Transactional
     public void parseStockExcelFile(MultipartFile excel) throws IOException {
         if (excel.isEmpty()) {
@@ -492,7 +502,7 @@ public class ExcelService {
                     throw new RuntimeException("Product option ID not found in row " + row.getRowNum());
                 } else {
                     try {
-                        long productOptionId = (long) cell.getNumericCellValue();
+                        long productOptionId = (long) cell.getNumericCellValue(); // 상품 옵션 ID 불러오기
                         ProductsOption productsOption = productsOptionRepository.findById(productOptionId).orElse(null);
 
                         if (productsOption != null) {
@@ -602,8 +612,10 @@ public class ExcelService {
 
             for (Row row : sheet) {
                 // 첫 번째 행(헤더)은 건너뜀
-                if (row.getRowNum() == 0) continue;
+                if (row.getRowNum() == 0 || row.getCell(0) == null) {continue;}
 
+                Cell cell0 = row.getCell(0);
+                
                 Cell cell11 = row.getCell(11);
                 Cell cell12 = row.getCell(12);
                 String trackingNumber = "";

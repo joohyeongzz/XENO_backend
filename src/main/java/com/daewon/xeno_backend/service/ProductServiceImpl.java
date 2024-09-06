@@ -1132,8 +1132,9 @@ public class ProductServiceImpl implements ProductService {
         return productInfoDTO;
     }
 
+    // 미 사용 메서드
     @Override
-    public ProductInfoDTO getProductInfoByBrand(Long productId) {
+    public ProductInfoDTO getProductInfoByBrand(Long productId) { // 자신이 팔고 있는 상품의 정보 가져오기
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -1155,18 +1156,6 @@ public class ProductServiceImpl implements ProductService {
             throw new IllegalArgumentException("Product cannot be null.");
         }
         ProductInfoDTO productInfoDTO = modelMapper.map(productsBrand.getProducts(), ProductInfoDTO.class); // dto 매핑
-
-        productInfoDTO.setProductId(productsBrand.getProducts().getProductId());
-        productInfoDTO.setBrandName(productsBrand.getProducts().getBrandName());
-        productInfoDTO.setName(productsBrand.getProducts().getName());
-        productInfoDTO.setCategory(productsBrand.getProducts().getCategory());
-        productInfoDTO.setCategorySub(productsBrand.getProducts().getCategorySub());
-        productInfoDTO.setPrice(productsBrand.getProducts().getPrice());
-        productInfoDTO.setPriceSale(productsBrand.getProducts().getPriceSale());
-        productInfoDTO.setProductNumber(productsBrand.getProducts().getProductNumber());
-        productInfoDTO.setSeason(productsBrand.getProducts().getSeason());
-        productInfoDTO.setSale(productsBrand.getProducts().getIsSale());
-        productInfoDTO.setColor(productsBrand.getProducts().getColor());
 
         ProductsStar productsStar = productsStarRepository.findByProductId(productId).orElse(null);
 
@@ -1190,7 +1179,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public List<UploadImageReadDTO> getUploadImageAll() {
+    public List<UploadImageReadDTO> getUploadImageAll() { // 내가 업로드한 이미지 불러오기 (상품 등록 전 업로드 이미지 조회 시 사용)
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String currentUserName = authentication.getName();
 
@@ -1207,8 +1196,9 @@ public class ProductServiceImpl implements ProductService {
                 .collect(Collectors.toList());
     }
 
+    // 사용 안하는 서비스
     @Override
-    public UploadImageReadDTO getUploadImageByProductNumber(String productNumber) {
+    public UploadImageReadDTO getUploadImageByProductNumber(String productNumber) { // 품번 별 업로드 이미지 불러오기
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String currentUserName = authentication.getName();
         Optional<Users> optionalUser = userRepository.findByEmail(currentUserName);
@@ -1236,7 +1226,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public long getSoldOutProductsCount() {
+    public long getSoldOutProductsCount() { // 품절된 상품의 수
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String currentUserName = authentication.getName();
         Users users = userRepository.findByEmail(currentUserName).orElse(null);
