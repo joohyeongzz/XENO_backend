@@ -1,7 +1,6 @@
 package com.daewon.xeno_backend.repository;
 
 import com.daewon.xeno_backend.domain.Orders;
-import com.daewon.xeno_backend.domain.Products;
 import com.daewon.xeno_backend.domain.ProductsOption;
 import com.daewon.xeno_backend.domain.auth.Brand;
 import com.daewon.xeno_backend.domain.auth.Users;
@@ -13,7 +12,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;

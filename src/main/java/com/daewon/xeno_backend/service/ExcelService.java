@@ -576,7 +576,7 @@ public class ExcelService {
                 log.info(ordersList);
                 for(Orders order : ordersList) {
                     Row row = sheet.createRow(rowIndex++);
-                    row.createCell(0).setCellValue(order.getOrderNumber());
+                    row.createCell(0).setCellValue(order.getOrderId());
                     row.createCell(1).setCellValue(order.getCreateAt().toString());
                     row.createCell(2).setCellValue(order.getAmount());
                     row.createCell(3).setCellValue(order.getQuantity());
@@ -635,8 +635,6 @@ public class ExcelService {
                 }
 
                 String carrierId = cell11.getStringCellValue();
-                // 숫자 값을 문자열로 변환
-
 
 
                 String url = "https://apis.tracker.delivery/graphql";
@@ -690,7 +688,7 @@ public class ExcelService {
                             String errorMessage = firstError.path("message").asText();
                             log.error("Error message: " + errorMessage);
                         } else {
-                            Orders order = ordersRepository.findByOrderNumber((long)row.getCell(0).getNumericCellValue());
+                            Orders order = ordersRepository.findByOrderId((long)row.getCell(0).getNumericCellValue()).orElse(null);
                             order.setStatus("출고 완료");
                             ordersRepository.save(order);
                             DeliveryTrack deliveryTrack = DeliveryTrack.builder()
@@ -712,6 +710,8 @@ public class ExcelService {
         }
     }
 
+
+    // 기간 별 판매내역 엑셀 다운로드
     public byte[] generateExcelForPeriod(LocalDate startDate, LocalDate endDate) throws IOException {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -781,7 +781,7 @@ public class ExcelService {
         String formula = String.format("SUM(C2:C%d)", rowIndex - 1); // 데이터 범위에 맞게 조정
         totalCell.setCellFormula(formula);
 
-        // Write to ByteArrayOutputStream
+
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             workbook.write(outputStream);
             workbook.close();
@@ -789,6 +789,8 @@ public class ExcelService {
         }
     }
 
+
+    // 환불 요청 엑셀 다운로드
     public byte[] generateCancelOrderExcel() throws IOException {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -832,6 +834,7 @@ public class ExcelService {
 
         int rowIndex = 1;
 
+        // 내 상품을 산 구매자가 환불 요청 한 주문 불러오기
         List<Orders> ordersList = ordersRepository.findByStatusAndBrand("환불 요청",users.getBrand());
         log.info(ordersList);
         for(Orders order : ordersList) {
