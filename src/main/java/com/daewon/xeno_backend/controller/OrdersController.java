@@ -2,6 +2,7 @@ package com.daewon.xeno_backend.controller;
 
 import com.daewon.xeno_backend.domain.auth.Customer;
 import com.daewon.xeno_backend.dto.auth.AuthSigninDTO;
+import com.daewon.xeno_backend.dto.cart.CartDTO;
 import com.daewon.xeno_backend.dto.order.*;
 import com.daewon.xeno_backend.dto.page.PageInfinityResponseDTO;
 import com.daewon.xeno_backend.dto.page.PageRequestDTO;
@@ -21,6 +22,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -30,6 +32,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -44,6 +47,34 @@ public class OrdersController {
     private final CustomerRepository customerRepository;
     private final UserRepository userRepository;
     private final ExcelService excelService;
+
+    @GetMapping("/delivery/info/read")
+    public ResponseEntity<?> getOrderDeliveryInfo(@RequestHeader("Authorization") String token) {
+        try {
+            if (token.startsWith("Bearer ")) {
+                token = token.substring(7);
+            }
+
+            Map<String, Object> claims = jwtUtil.validateToken(token);
+            Long userId = Long.parseLong(claims.get("userId").toString());
+
+            OrderDeliveryInfoReadDTO orderDeliveryInfoReadDTO = ordersService.getOrderDeliveryInfo(userId);
+
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            AuthSigninDTO authSigninDTO = (AuthSigninDTO) authentication.getPrincipal();
+            Long authenticatedUserId = authSigninDTO.getUserId();
+
+            log.info("인증된 유저 ID: " + authenticatedUserId);
+
+            if (!userId.equals(authenticatedUserId)) {
+                return ResponseEntity.status(403).body("접근 권한이 없습니다.");
+            }
+
+            return ResponseEntity.ok(orderDeliveryInfoReadDTO);
+        } catch (JwtException e) {
+            return ResponseEntity.status(401).body("토큰이 유효하지 않습니다.");
+        }
+    }
 
     @GetMapping
     public ResponseEntity<?> getAllOrders(@RequestHeader("Authorization") String token) {
@@ -86,20 +117,21 @@ public class OrdersController {
         try {
             String userEmail = userDetails.getUsername();
 
-            Customer customer = customerRepository.findByUserId(userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new UserNotFoundException("User not found")).getUserId())
-                .orElseThrow(() -> new UserNotFoundException("Customer not found"));
+//            Customer customer = customerRepository.findByUserId(userRepository.findByEmail(userEmail)
+//                .orElseThrow(() -> new UserNotFoundException("User not found")).getUserId())
+//                .orElseThrow(() -> new UserNotFoundException("Customer not found"));
+//
+//            int usedPoint = ordersDTO.stream().mapToInt(OrdersDTO::getUsedPoint).sum();
+//            if (usedPoint > customer.getPoint()) {
+//                return ResponseEntity.status(400).body("사용 가능한 적립금이 부족합니다.");
+//            }
+//            customer.setPoint(customer.getPoint() - usedPoint);
+//            customerRepository.save(customer);
+//
+//            // 상품 가격에서 사용한 적립금만큼 차감
+//            ordersDTO.forEach(dto -> dto.setAmount(dto.getAmount() - dto.getUsedPoint()));
 
-            int usedPoint = ordersDTO.stream().mapToInt(OrdersDTO::getUsedPoint).sum();
-            if (usedPoint > customer.getPoint()) {
-                return ResponseEntity.status(400).body("사용 가능한 적립금이 부족합니다.");
-            }
-            customer.setPoint(customer.getPoint() - usedPoint);
-            customerRepository.save(customer);
-
-            // 상품 가격에서 사용한 적립금만큼 차감
-            ordersDTO.forEach(dto -> dto.setAmount(dto.getAmount() - dto.getUsedPoint()));
-
+            log.info(ordersDTO);
             List<OrdersDTO> createdOrder = ordersService.createOrders(ordersDTO, userEmail);
             return ResponseEntity.ok(createdOrder);
         } catch (Exception e) {
@@ -115,20 +147,47 @@ public class OrdersController {
         return ResponseEntity.ok(latestReq);
     }
 
-    //  프론트에서 address, phoneNumber 값을 보내주면 해당하는 user의 address, phoneNumber 추가됨.
+   //  프론트에서 address, phoneNumber 값을 보내주면 해당하는 user의 address, phoneNumber 추가됨.
     @PostMapping("/delivery")
-    public ResponseEntity<String> updateDeliveryInfo(@RequestBody DeliveryOrdersDTO deliveryOrdersDTO,
-                                                     @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<Map<String, Object>> updateDeliveryInfo(@RequestBody Map<String, Object> deliveryInfo,
+                                                                  @AuthenticationPrincipal UserDetails userDetails) {
+        Map<String, Object> response = new HashMap<>();
+
         try {
+            String address = (String) deliveryInfo.get("address");
+            String phoneNumber = (String) deliveryInfo.get("phoneNumber");
+
+            if (address == null || phoneNumber == null) {
+                response.put("success", false);
+                response.put("message", "주소와 전화번호를 모두 제공해야 합니다.");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            // 사용자 정보 업데이트
             ordersService.updateUserDeliveryInfo(
                     userDetails.getUsername(),
-                    deliveryOrdersDTO.getAddress(),
-                    deliveryOrdersDTO.getPhoneNumber()
+                    address,
+                    phoneNumber
             );
 
-            return ResponseEntity.ok("배송 정보를 업데이트 했습니다.");
+            // 업데이트된 정보를 응답에 포함
+            response.put("success", true);
+            response.put("message", "배송 정보를 업데이트 했습니다.");
+            response.put("updatedInfo", new HashMap<String, Object>() {{
+                put("address", address);
+                put("phoneNumber", phoneNumber);
+            }});
+
+            return ResponseEntity.ok(response);
+
+        } catch (ClassCastException e) {
+            response.put("success", false);
+            response.put("message", "잘못된 데이터 형식입니다.");
+            return ResponseEntity.badRequest().body(response);
         } catch (Exception e) {
-            return ResponseEntity.status(400).body("알맞은 주소와 휴대폰 번호를 입력해주세요");
+            response.put("success", false);
+            response.put("message", "서버 오류가 발생했습니다.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 
@@ -161,13 +220,29 @@ public class OrdersController {
         }
     }
 
-    @GetMapping("/seller/list")
-    public ResponseEntity<List<OrderInfoBySellerDTO>> getOrderListBySeller(@AuthenticationPrincipal UserDetails userDetails, PageRequestDTO pageRequestDTO) {
+
+
+    @GetMapping("/refund/list")
+    public ResponseEntity<PageInfinityResponseDTO<OrdersCardListDTO>> getRefundedOrderCardList(@AuthenticationPrincipal UserDetails userDetails, PageRequestDTO pageRequestDTO) {
         try {
             String userEmail = userDetails.getUsername();
 
             log.info("orderUserEmail : " + userEmail);
-            List<OrderInfoBySellerDTO> orderList = ordersService.getOrderListBySeller(userEmail);
+            PageInfinityResponseDTO<OrdersCardListDTO> orderCardList = ordersService.getRefundedOrderCardList(pageRequestDTO,userEmail);
+            log.info(orderCardList);
+            return ResponseEntity.ok(orderCardList);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @GetMapping("/Brand/list")
+    public ResponseEntity<List<OrderInfoByBrandDTO>> getOrderListByBrand(@AuthenticationPrincipal UserDetails userDetails, PageRequestDTO pageRequestDTO) {
+        try {
+            String userEmail = userDetails.getUsername();
+
+            log.info("orderUserEmail : " + userEmail);
+            List<OrderInfoByBrandDTO> orderList = ordersService.getOrderListByBrand(userEmail);
             log.info(orderList);
             return ResponseEntity.ok(orderList);
         } catch (Exception e) {
@@ -175,12 +250,12 @@ public class OrdersController {
         }
     }
 
-    @PutMapping(value = "/seller/status/update",produces = "application/json")
-    public ResponseEntity<?> updateOrderStatusBySeller(@RequestBody OrdersStatusUpdateDTO dto) {
+    @PutMapping(value = "/brand/status/update",produces = "application/json")
+    public ResponseEntity<?> updateOrderStatusByBrand(@RequestBody OrdersStatusUpdateDTO dto) {
         try {
 
             log.info(dto);
-             ordersService.updateOrderStatusBySeller(dto);
+             ordersService.updateOrderStatusByBrand(dto);
 
             return ResponseEntity.ok("\"성공\"");
         } catch (Exception e) {
@@ -255,17 +330,109 @@ public class OrdersController {
         }
     }
 
-    @GetMapping("/salesByYear")
-    public ResponseEntity<Map<Integer, Boolean>> getSalesByYear() {
-        Map<Integer, Boolean> salesByYear = ordersService.getSalesByYear();
-        return ResponseEntity.ok(salesByYear);
+    @PreAuthorize("hasRole('USER')")
+    @PutMapping(value = "/cancel",produces = "application/json")
+    public ResponseEntity<?> cancelOrder(
+            @RequestBody OrderCancelDTO dto) {
+        try {
+            log.info(dto);
+            ordersService.cancelOrder(dto);
+            return ResponseEntity.ok("\"성공\"");
+        } catch (Exception e) {
+            return ResponseEntity.status(404).body("해당하는 주문이 없습니다.");
+        }
+    }
+
+    @PreAuthorize("hasRole('USER')")
+    @PutMapping(value = "/request-refund",produces = "application/json")
+    public ResponseEntity<?> refundRequestOrder(
+            @RequestBody OrderCancelDTO dto) {
+        try {
+            ordersService.refundOrder(dto);
+            return ResponseEntity.ok("\"성공\"");
+        } catch (Exception e) {
+            return ResponseEntity.status(404).body("해당하는 주문이 없습니다.");
+        }
+    }
+
+    @Operation(summary = "환불 요청 상품 엑셀 다운로드")
+    @GetMapping("/download/order-refund-excel")
+    public void downloadOrderByRefundExcel(HttpServletResponse response) throws IOException {
+        byte[] excelFile = excelService.generateCancelOrderExcel();
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-Disposition", "attachment;filename=order.xlsx");
+        try (ServletOutputStream outputStream = response.getOutputStream()) {
+            outputStream.write(excelFile);
+            outputStream.flush();
+        }
+    }
+
+
+    @PutMapping(value = "/refund", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> refundOrder(@RequestPart(name = "excel") MultipartFile excel) {
+        // Check if the file is empty
+        if (excel.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("엑셀 파일이 업로드되지 않았습니다.");
+        }
+
+        // Validate file type
+        String contentType = excel.getContentType();
+        if (contentType == null || !contentType.equals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("유효하지 않은 파일 형식입니다. 엑셀 파일만 업로드할 수 있습니다.");
+        }
+
+        try {
+            // Process the file
+            excelService.parseCancelOrderExcelFile(excel);
+            return ResponseEntity.ok("\"성공\"");
+        } catch (IOException e) {
+            // Log the exception and return a server error response
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("파일 처리 중 오류가 발생했습니다.");
+        } catch (Exception e) {
+            // Handle other exceptions
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("예상치 못한 오류가 발생했습니다.");
+        }
+    }
+
+    @PostMapping("/complete")
+    public ResponseEntity<String> orderComplete(@RequestBody Long orderId) {
+        try {
+            ordersService.orderComplete(orderId);
+            return ResponseEntity.ok("\"구매 확정 성공\"");
+        } catch (Exception e) {
+            // 오류 발생 시
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("\"구매 확정 실패\"");
+        }
+
+    }
+
+    @GetMapping("/count")
+    public List<OrdersCountDTO> getOrdersCount() {
+        return ordersService.getOrdersCountByPaymentAndRefund();
     }
 
 
 
+    @GetMapping("/amount-by-date")
+    public List<OrdersSalesAmountDTO> getBrandSalesAmount(@RequestParam int year) {
+        return ordersService.getBrandSalesAmount(year);
+    }
 
+    @GetMapping("/quantity-by-date")
+    public List<OrdersSalesQuantityDTO> getBrandSalesCount(@RequestParam int year) {
+        return ordersService.getBrandSalesCount(year);
+    }
 
-
+    @GetMapping("/selling-products-top10")
+    public List<OrdersTopSellingProductsDTO> getBrandTop10SellingProducts() {
+        return ordersService.getBrandTop10SellingProducts();
+    }
 
 
 

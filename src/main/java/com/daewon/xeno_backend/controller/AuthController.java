@@ -57,27 +57,51 @@ public class AuthController {
         try {
             Users user = authService.signup(userSignupDTO);
             log.info(user);
-            return ResponseEntity.status(201).body("회원가입이 성공적으로 완료되었습니다.");
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "회원가입이 성공적으로 완료되었습니다.");
+            response.put("user", user.toString());
+
+            return ResponseEntity.status(201).body(response);
         } catch (UserEmailExistException e) {
             log.error("해당 Email이 이미 존재함 : " + userSignupDTO.getEmail(), e);
-            return ResponseEntity.status(409).body("이미 존재하는 이메일입니다.");
+
+            Map<String, String> errorReponse = new HashMap<>();
+            errorReponse.put("error", "이미 존재하는 이메일입니다.");
+
+            return ResponseEntity.status(409).body(errorReponse);
         } catch (Exception e) {
             log.error("회원가입 중 오류 발생", e);
-            return ResponseEntity.status(500).body("회원가입 처리 중 오류가 발생했습니다.");
+
+            Map<String, String> errorReponse = new HashMap<>();
+            errorReponse.put("error", "회원가입 처리 중 오류가 발생했습니다.");
+
+            return ResponseEntity.status(500).body(errorReponse);
         }
     }
 
     @Operation(summary = "판매자 회원가입 처리", description = "판매자 회원가입 요청을 처리합니다.")
-    @PostMapping("/signup/seller")
+
+    @PostMapping("/signup/brand")
     public ResponseEntity<?> signupBrand(@RequestBody BrandDTO dto) {
         try {
-            UserSignupDTO registeredUser = authService.signupBrand(dto);
-            return ResponseEntity.status(201).body("판매사 회원가입 완료");
+            BrandApprovalDTO result = authService.requestBrandSignup(dto);
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "판매사 승인 대기중입니다.");
+            response.put("registeredBrand", result.toString());
+
+            return ResponseEntity.status(201).body(response);
         } catch (DataIntegrityViolationException e) {
             log.error("Email 중복 됨 : " + dto.getEmail(), e);
-            return ResponseEntity.status(409).body("이미 존재하는 이메일입니다.");
+
+            Map<String, String> errorReponse = new HashMap<>();
+            errorReponse.put("error", "이미 존재하는 이메일입니다.");
+
+            return ResponseEntity.status(409).body(errorReponse);
         }
     }
+
 
     @Operation(summary = "관리자 회원가입 처리", description = "관리자 회원가입 요청을 처리합니다.")
     @PostMapping("/signup/manager")
@@ -85,13 +109,25 @@ public class AuthController {
         try {
             Manager manager = authService.signupManager(userSignupDTO);
 
-            return ResponseEntity.status(201).body("관리자 회원가입 완료");
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "관리자 회원가입 완료");
+            response.put("manager", manager.toString());
+
+            return ResponseEntity.status(201).body(response);
         } catch (DataIntegrityViolationException e) {
             log.error("해당 Email이 이미 존재함 : " + userSignupDTO.getEmail(), e);
-            return ResponseEntity.status(409).body("이미 존재하는 이메일입니다.");
+
+            Map<String, String> errorReponse = new HashMap<>();
+            errorReponse.put("error", "이미 존재하는 이메일입니다.");
+
+            return ResponseEntity.status(409).body(errorReponse);
         } catch (Exception e) {
             log.error("회원가입 중 오류 발생", e);
-            return ResponseEntity.status(500).body("회원가입 처리 중 오류가 발생했습니다.");
+
+            Map<String, String> errorReponse = new HashMap<>();
+            errorReponse.put("error", "회원가입 처리 중 오류가 발생했습니다.");
+
+            return ResponseEntity.status(500).body(errorReponse);
         }
 
     }
@@ -153,15 +189,18 @@ public class AuthController {
             // 결론은 클라이언트는 JSON 형식으로 데이터를 받게 됨ㅁ
             return ResponseEntity.ok(tokens);
         }else {
+            Map<String, String> errorReponse = new HashMap<>();
+            errorReponse.put("error", "이메일이나 비밀번호가 맞지 않습니다.");
+
             // 401에러 발생
-            return ResponseEntity.status(401).body("이메일이나 비밀번호가 맞지 않습니다.");
+            return ResponseEntity.status(401).body(errorReponse);
         }
     }
 
-    @GetMapping("/seller/read")
-    public ResponseEntity<?> readSellerInfo(@AuthenticationPrincipal UserDetails userDetails) {
+    @GetMapping("/brand/read")
+    public ResponseEntity<?> readBrandInfo(@AuthenticationPrincipal UserDetails userDetails) {
 
-        SellerInfoCardDTO dto = authService.readSellerInfo(userDetails);
+        BrandInfoCardDTO dto = authService.readBrandInfo(userDetails);
         return ResponseEntity.ok(dto);
 
 

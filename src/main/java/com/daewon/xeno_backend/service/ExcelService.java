@@ -3,17 +3,20 @@ package com.daewon.xeno_backend.service;
 
 import com.daewon.xeno_backend.domain.*;
 import com.daewon.xeno_backend.domain.auth.Users;
+import com.daewon.xeno_backend.dto.order.OrderCancelDTO;
 import com.daewon.xeno_backend.dto.product.ProductRegisterDTO;
 import com.daewon.xeno_backend.dto.product.ProductSizeDTO;
 import com.daewon.xeno_backend.repository.DeliveryTrackRepository;
+import com.daewon.xeno_backend.repository.OrdersRefundRepository;
 import com.daewon.xeno_backend.repository.OrdersRepository;
 import com.daewon.xeno_backend.repository.Products.ProductsImageRepository;
 import com.daewon.xeno_backend.repository.Products.ProductsOptionRepository;
-import com.daewon.xeno_backend.repository.Products.ProductsSellerRepository;
+import com.daewon.xeno_backend.repository.Products.ProductsBrandRepository;
 import com.daewon.xeno_backend.repository.auth.UserRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddressList;
@@ -42,26 +45,19 @@ import java.util.stream.Collectors;
 
 @Service
 @Log4j2
+@RequiredArgsConstructor
 public class ExcelService {
 
     private final ProductsImageRepository productsImageRepository;
     private final ProductsOptionRepository productsOptionRepository;
-    private final ProductsSellerRepository productsSellerRepository;
+    private final ProductsBrandRepository productsBrandRepository;
     private final UserRepository userRepository;
     private final OrdersRepository ordersRepository;
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper jacksonObjectMapper;
     private final DeliveryTrackRepository deliveryTrackRepository;
-
-    public ExcelService(ProductsImageRepository productsImageRepository, ProductsOptionRepository productsOptionRepository, ProductsSellerRepository productsSellerRepository, UserRepository userRepository, OrdersRepository ordersRepository, ObjectMapper jacksonObjectMapper, DeliveryTrackRepository deliveryTrackRepository) {
-        this.productsImageRepository = productsImageRepository;
-        this.productsOptionRepository = productsOptionRepository;
-        this.productsSellerRepository = productsSellerRepository;
-        this.userRepository = userRepository;
-        this.ordersRepository = ordersRepository;
-        this.jacksonObjectMapper = jacksonObjectMapper;
-        this.deliveryTrackRepository = deliveryTrackRepository;
-    }
+    private final OrdersRefundRepository ordersRefundRepository;
+    private final OrdersService ordersService;
 
     public List<ProductRegisterDTO> parseExcelFile(MultipartFile excel) throws IOException {
         List<ProductRegisterDTO> productList = new ArrayList<>();
@@ -102,22 +98,33 @@ public class ExcelService {
                 product.setSale(row.getCell(5) == null || row.getCell(5).getNumericCellValue() == 0 ? false : true);
 
                 product.setColors(row.getCell(6).getStringCellValue());
-
                 String sizeString = getCellValue(row.getCell(7)); // Comma-separated sizes
                 String stockString = getCellValue(row.getCell(8)); // Comma-separated stocks
 
                 String[] sizes = sizeString.split(",");
                 String[] stocks = stockString.split(",");
 
+                if (sizes.length != stocks.length) {
+                    // 로깅 또는 오류 처리
+                    System.err.println("Sizes and stocks arrays must have the same length for row " + row.getRowNum());
+                    continue; // 다음 행으로 넘어갑니다.
+                }
+
                 List<ProductSizeDTO> sizeDTOs = new ArrayList<>();
                 for (int i = 0; i < sizes.length; i++) {
                     ProductSizeDTO sizeDTO = new ProductSizeDTO();
                     sizeDTO.setSize(sizes[i].trim());
 
-                    // 소수점이 포함된 문자열을 Double로 변환한 후 정수로 변환
-                    double stockDouble = Double.parseDouble(stocks[i].trim());
-                    int stockInt = (int) Math.round(stockDouble);
-                    sizeDTO.setStock(stockInt);
+                    try {
+                        // 소수점을 포함한 문자열을 Double로 변환한 후 정수로 변환
+                        double stockDouble = Double.parseDouble(stocks[i].trim());
+                        int stockInt = (int) Math.round(stockDouble);
+                        sizeDTO.setStock(stockInt);
+                    } catch (NumberFormatException e) {
+                        // 숫자 변환 오류 처리
+                        System.err.println("Error parsing stock value: " + stocks[i]);
+                        sizeDTO.setStock(0); // 기본값 또는 오류 처리 로직
+                    }
 
                     sizeDTOs.add(sizeDTO);
                 }
@@ -175,7 +182,7 @@ public class ExcelService {
 
         Users users = optionalUser.get();
 
-        List<ProductsSeller> products = productsSellerRepository.findByUsers(users);
+        List<ProductsBrand> products = productsBrandRepository.findByBrand(users.getBrand());
 
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Sheet1");
@@ -221,7 +228,7 @@ public class ExcelService {
         sheet.addValidationData(categoryValidation);
 
         int rowIndex = 1;
-        for (ProductsSeller product : products) {
+        for (ProductsBrand product : products) {
             Row row = sheet.createRow(rowIndex++);
             row.createCell(0).setCellValue(product.getProducts().getProductNumber());
             row.createCell(1).setCellValue(product.getProducts().getName());
@@ -277,7 +284,7 @@ public class ExcelService {
 
         Users users = optionalUser.get();
 
-        List<ProductsSeller> products = productsSellerRepository.findByUsers(users);
+        List<ProductsBrand> products = productsBrandRepository.findByBrand(users.getBrand());
 
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Sheet1");
@@ -311,6 +318,16 @@ public class ExcelService {
             headerCell.setCellValue(headerNames[i]);
         }
 
+        CellStyle textStyle = workbook.createCellStyle();
+        DataFormat format = workbook.createDataFormat();
+        textStyle.setDataFormat(format.getFormat("@")); // Text format
+
+        for (int rowIndex = 1; rowIndex <= 100; rowIndex++) { // 예를 들어 100행 정도를 처리
+            Row row = sheet.createRow(rowIndex); // 행 생성
+            Cell stockCell = row.createCell(8); // '재고' 열 셀 생성
+            stockCell.setCellStyle(textStyle); // 텍스트 서식 적용
+        }
+
         // Write to ByteArrayOutputStream
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             workbook.write(outputStream);
@@ -332,7 +349,7 @@ public class ExcelService {
 
         Users users = optionalUser.get();
 
-        List<ProductsSeller> products = productsSellerRepository.findByUsers(users);
+        List<ProductsBrand> products = productsBrandRepository.findByBrand(users.getBrand());
 
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Sheet1");
@@ -355,7 +372,7 @@ public class ExcelService {
         }
 
         int rowIndex = 1;
-        for (ProductsSeller product : products) {
+        for (ProductsBrand product : products) {
             List<ProductsOption> productsOptions = productsOptionRepository.findByProductId(product.getProducts().getProductId());
             for (ProductsOption productsOption : productsOptions) {
                 Row row = sheet.createRow(rowIndex++);
@@ -522,10 +539,10 @@ public class ExcelService {
 
         int rowIndex = 1;
 
-        List<ProductsSeller> products = productsSellerRepository.findByUsers(users);
+        List<ProductsBrand> products = productsBrandRepository.findByBrand(users.getBrand());
         log.info(products);
-        for(ProductsSeller productsSeller : products) {
-            List<ProductsOption> productsOptions = productsOptionRepository.findByProductId(productsSeller.getProducts().getProductId());
+        for(ProductsBrand productsBrand : products) {
+            List<ProductsOption> productsOptions = productsOptionRepository.findByProductId(productsBrand.getProducts().getProductId());
             log.info(productsOptions);
             for(ProductsOption productsOption : productsOptions) {
                 List<Orders> ordersList = ordersRepository.findByStatusAndProductsOption("결제 완료",productsOption);
@@ -690,13 +707,12 @@ public class ExcelService {
                 "결제 금액",
                 "수량",
                 "요청 사항",
-                "배송 상태",
+                "주문 상태",
                 "품번",
                 "상품 이름",
                 "색상",
                 "사이즈",
                 "구매자",
-
         };
 
         Row headerRow = sheet.createRow(rowCount++);
@@ -707,12 +723,9 @@ public class ExcelService {
 
         int rowIndex = 1;
 
-        List<ProductsSeller> products = productsSellerRepository.findByUsers(users);
-        log.info(products);
-
         LocalDateTime startDateTime = startDate.atStartOfDay();
         LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
-        List<Orders> ordersList = ordersRepository.findBySellerIdAndDateRange(users,startDateTime,endDateTime);
+        List<Orders> ordersList = ordersRepository.findByBrandAndDateRange(users.getBrand(),startDateTime,endDateTime);
         log.info(ordersList);
         for(Orders order : ordersList) {
             Row row = sheet.createRow(rowIndex++);
@@ -744,6 +757,134 @@ public class ExcelService {
             workbook.write(outputStream);
             workbook.close();
             return outputStream.toByteArray();
+        }
+    }
+
+    public byte[] generateCancelOrderExcel() throws IOException {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserName = authentication.getName();
+        Optional<Users> optionalUser = userRepository.findByEmail(currentUserName);
+
+        if (optionalUser.isEmpty()) {
+            throw new RuntimeException("User not found: " + currentUserName);
+        }
+
+        Users users = optionalUser.get();
+
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Sheet1");
+        sheet.setDefaultColumnWidth(10);
+
+        // Header data
+        int rowCount = 0;
+        String headerNames[] = new String[]{
+                "주문 코드",
+                "결제 시간",
+                "결제 금액",
+                "수량",
+                "요청 사항",
+                "주문 상태",
+                "품번",
+                "상품 이름",
+                "색상",
+                "사이즈",
+                "구매자",
+                "환불 요청 시간",
+                "환불 사유",
+                "상품 확인 여부"
+        };
+
+        Row headerRow = sheet.createRow(rowCount++);
+        for (int i = 0; i < headerNames.length; i++) {
+            Cell headerCell = headerRow.createCell(i);
+            headerCell.setCellValue(headerNames[i]);
+        }
+
+        int rowIndex = 1;
+
+        List<Orders> ordersList = ordersRepository.findByStatusAndBrand("환불 요청",users.getBrand());
+        log.info(ordersList);
+        for(Orders order : ordersList) {
+            Row row = sheet.createRow(rowIndex++);
+            OrdersRefund ordersRefund = ordersRefundRepository.findByOrderId(order.getOrderId());
+            row.createCell(0).setCellValue(order.getOrderId());
+            row.createCell(1).setCellValue(order.getCreateAt().toString());
+            row.createCell(2).setCellValue(order.getAmount());
+            row.createCell(3).setCellValue(order.getQuantity());
+            row.createCell(4).setCellValue(order.getReq());
+            row.createCell(5).setCellValue(order.getStatus());
+            row.createCell(6).setCellValue(order.getProductsOption().getProducts().getProductNumber());
+            row.createCell(7).setCellValue(order.getProductsOption().getProducts().getName());
+            row.createCell(8).setCellValue(order.getProductsOption().getProducts().getColor());
+            row.createCell(9).setCellValue(order.getProductsOption().getSize());
+            row.createCell(10).setCellValue(order.getCustomer().getName());
+            row.createCell(11).setCellValue(order.getUpdateAt().toString());
+            row.createCell(12).setCellValue(ordersRefund.getReason());
+            row.createCell(13).setCellValue("");
+        }
+        Row totalRow = sheet.createRow(rowIndex++);
+
+        // Write to ByteArrayOutputStream
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            workbook.write(outputStream);
+            workbook.close();
+            return outputStream.toByteArray();
+        }
+    }
+
+    @Transactional
+    public void parseCancelOrderExcelFile(MultipartFile excel) throws IOException {
+        if (excel.isEmpty()) {
+            throw new RuntimeException("업로드된 파일이 비어 있습니다.");
+        }
+
+        try (InputStream fis = excel.getInputStream(); Workbook workbook = new XSSFWorkbook(fis)) {
+            Sheet sheet = workbook.getSheetAt(0);
+
+            if (sheet == null) {
+                throw new RuntimeException("엑셀 시트가 존재하지 않습니다.");
+            }
+
+            // 헤더 행 검사
+            Row headerRow = sheet.getRow(0);
+            if (headerRow == null) {
+                throw new RuntimeException("헤더 행이 존재하지 않습니다.");
+            }
+
+
+            for (Row row : sheet) {
+                // 첫 번째 행(헤더)은 건너뜀
+                if (row.getRowNum() == 0) continue;
+                if(row.getCell(13) == null || row.getCell(13).getStringCellValue().trim().isEmpty() ||
+                        !row.getCell(13).getStringCellValue().equals("확인")) continue;
+
+                // 비어 있는 행 건너뜀
+                if (row.getCell(0) == null || row.getCell(0).getCellType() == CellType.STRING) {
+                    throw new RuntimeException("Product option ID not found in row " + row.getRowNum());
+                }
+
+                Cell cell = row.getCell(0);
+                long orderId = 0;
+
+                if (cell.getCellType() == CellType.NUMERIC) {
+                    double numericValue = cell.getNumericCellValue();
+                        orderId = (long)numericValue;
+                } else if (cell.getCellType() == CellType.STRING) {
+                    String stringValue = cell.getStringCellValue();
+                    orderId = Long.parseLong(stringValue);
+
+                }
+
+                String reason = row.getCell(12).getStringCellValue();
+
+                OrderCancelDTO dto = new OrderCancelDTO();
+                dto.setOrderId(orderId);
+                dto.setReason(reason);
+
+                ordersService.cancelOrder(dto);
+
+            }
         }
     }
 

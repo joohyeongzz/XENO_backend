@@ -11,14 +11,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @SpringBootTest
-@RequestMapping("/sellerRegister")
+@RequestMapping("/brandRegister")
 public class BrandController {
     @Autowired
     private BrandService brandService;
 
-    @PostMapping("/register/seller")
-    public ResponseEntity<?> registerSeller(@RequestBody SellerDTO dto) {
-        Users registeredUser = brandService.registerSellerUser(dto);
+    @PostMapping("/register/brand")
+    public ResponseEntity<?> registerBrand(@RequestBody BrandDTO dto) {
+        Users registeredUser = brandService.registerBrandUser(dto);
         return ResponseEntity.ok(registeredUser);
     }
 }

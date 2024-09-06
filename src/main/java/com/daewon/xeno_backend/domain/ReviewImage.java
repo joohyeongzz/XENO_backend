@@ -25,10 +25,6 @@ public class ReviewImage {
     @OnDelete(action = OnDeleteAction.CASCADE)
     private Review review;
 
-    private String fileName;
-
-
-
-    private String uuid;
+    private String url;
 
 }

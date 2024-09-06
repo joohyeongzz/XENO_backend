@@ -9,6 +9,9 @@ import java.util.List;
 
 public interface DeliveryTrackRepository extends JpaRepository<DeliveryTrack, Long> {
 
-    @Query("SELECT d FROM DeliveryTrack d WHERE d.order.status IN ('출고 완료', '배송 중', '배송 완료','배송 준비 완료')")
+    @Query("SELECT d FROM DeliveryTrack d WHERE d.order.status IN ('출고 완료', '배송 중', '배송 준비 중', '배송 완료','배송 준비 완료')")
     List<DeliveryTrack> findOrdersWithStatusIn();
+
+    @Query("SELECT d FROM DeliveryTrack d where d.order = :orders")
+    DeliveryTrack findByOrders(Orders orders);
 }
