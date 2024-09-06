@@ -513,7 +513,7 @@ public class OrdersServiceImpl implements OrdersService {
         Users users = userRepository.findByEmail(currentUserName)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없음"));
         long refundCount = ordersRepository.countByStatus("환불 요청", users.getBrand()); // 환불 요청된 상품 수
-        long paymentCompleteCount = ordersRepository.countByStatus("결제 취소", users.getBrand());
+        long paymentCompleteCount = ordersRepository.countByStatus("결제 완료", users.getBrand());
 
         List<OrdersCountDTO> ordersCountDTOList = new ArrayList<>();
         OrdersCountDTO ordersCountDTO = new OrdersCountDTO();
