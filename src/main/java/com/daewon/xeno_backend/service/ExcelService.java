@@ -36,6 +36,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.rmi.RemoteException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -601,6 +602,7 @@ public class ExcelService {
         }
     }
 
+    // 운송장 등록하기
     @Transactional
     public void parseOrderExcelFile(MultipartFile excel) throws IOException {
         if (excel.isEmpty()) {
@@ -614,7 +616,8 @@ public class ExcelService {
                 // 첫 번째 행(헤더)은 건너뜀
                 if (row.getRowNum() == 0 || row.getCell(0) == null) {continue;}
 
-                Cell cell0 = row.getCell(0);
+
+                log.info("row"+row.getCell(0));
                 
                 Cell cell11 = row.getCell(11);
                 Cell cell12 = row.getCell(12);
@@ -689,14 +692,22 @@ public class ExcelService {
                             log.error("Error message: " + errorMessage);
                         } else {
                             Orders order = ordersRepository.findByOrderId((long)row.getCell(0).getNumericCellValue()).orElse(null);
+
+                            log.info(order);
+                            DeliveryTrack deliveryTrack = deliveryTrackRepository.findByOrders(order);
+                            if(deliveryTrack != null) {
+                                throw new RemoteException("이미 존재하는 배송 정보입니다.");
+                            } else {
+                                DeliveryTrack newDeliveryTrack = DeliveryTrack.builder()
+                                        .carrierId(carrierId)
+                                        .trackingNumber(trackingNumber)
+                                        .order(order)
+                                        .build();
+                                deliveryTrackRepository.save(newDeliveryTrack);
+                            }
                             order.setStatus("출고 완료");
                             ordersRepository.save(order);
-                            DeliveryTrack deliveryTrack = DeliveryTrack.builder()
-                                  .carrierId(carrierId)
-                                  .trackingNumber(trackingNumber)
-                                  .order(order)
-                                  .build();
-                           deliveryTrackRepository.save(deliveryTrack);
+
                         }
                     } else {
                         log.warn("Response body is null.");
