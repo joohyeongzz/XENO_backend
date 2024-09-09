@@ -104,7 +104,7 @@ public class ExcelService {
                 product.setCategorySub(row.getCell(3).getStringCellValue());
                 product.setPrice((long)row.getCell(4).getNumericCellValue());
                 product.setPriceSale(row.getCell(5) == null || row.getCell(5).getNumericCellValue() == 0 ? 0 : (long)row.getCell(5).getNumericCellValue());
-                product.setSale(row.getCell(5) == null || row.getCell(5).getNumericCellValue() == 0 ? false : true);
+                product.setSale(product.getPriceSale() != 0);
 
                 product.setColors(row.getCell(6).getStringCellValue());
                 String sizeString = getCellValue(row.getCell(7)); // Comma-separated sizes
