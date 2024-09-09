@@ -91,6 +91,8 @@ public class ExcelService {
                             log.info(productNumber);
                             productNumber = String.valueOf((long)cell.getNumericCellValue());
                             break;
+                        case BLANK:
+                            continue;
                         default:
                             productNumber = "";
                             break;

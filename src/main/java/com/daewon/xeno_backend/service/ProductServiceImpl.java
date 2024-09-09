@@ -459,7 +459,7 @@ public class ProductServiceImpl implements ProductService {
                     .map(ProductsBrand::getProducts)
                     .collect(Collectors.toSet());
 
-            // 엑셀의 없는 품번이 DB에는 있다면 DB에서 삭제
+            // 엑셀에 없는 품번이 DB에는 있다면 DB에서 삭제
             for (Products product : productNumbersFromDB) {
                 if (!productNumbersFromExcel.contains(product.getProductNumber())) {
                     ProductsImage image = productsImageRepository.findByProductId(product.getProductId());
