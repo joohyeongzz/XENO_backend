@@ -1,6 +1,7 @@
 package com.daewon.xeno_backend.domain;
 
 
+import com.daewon.xeno_backend.domain.auth.Brand;
 import com.daewon.xeno_backend.domain.auth.Users;
 import jakarta.persistence.*;
 import lombok.*;
@@ -24,9 +25,9 @@ public class ProductsImage {
   private String productNumber;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "userId", referencedColumnName = "userId")
+  @JoinColumn(name = "brandId", referencedColumnName = "brandId")
   @OnDelete(action = OnDeleteAction.CASCADE)
-  private Users users;
+  private Brand brand;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "productId", referencedColumnName = "productId")

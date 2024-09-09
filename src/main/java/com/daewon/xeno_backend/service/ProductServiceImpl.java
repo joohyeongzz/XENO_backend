@@ -117,7 +117,7 @@ public class ProductServiceImpl implements ProductService {
         String currentUserName = authentication.getName();
         Users users = userRepository.findByEmail(currentUserName).orElse(null);
 
-        ProductsImage productsImage = productsImageRepository.findByProductNumberAndUsers(productNumber, users);
+        ProductsImage productsImage = productsImageRepository.findByProductNumberAndUsers(productNumber, users.getBrand());
         if(productsImage == null) {
             productsImage = ProductsImage.builder()
                     .productNumber(productNumber)
@@ -128,7 +128,7 @@ public class ProductServiceImpl implements ProductService {
                     .url_5(numberOfImages > 4 ? urls[4] : null)
                     .url_6(numberOfImages > 5 ? urls[5] : null)
                     .detail_url(detailUrl)
-                    .users(users)
+                    .brand(users.getBrand())
                     .build();
             productsImageRepository.save(productsImage);
         } else {
@@ -146,7 +146,7 @@ public class ProductServiceImpl implements ProductService {
         String currentUserName = authentication.getName();
         Users users = userRepository.findByEmail(currentUserName).orElse(null);
         // 품번과 유저로 이미지 찾기
-        ProductsImage productsImage = productsImageRepository.findByProductNumberAndUsers(productNumber, users);
+        ProductsImage productsImage = productsImageRepository.findByProductNumberAndUsers(productNumber, users.getBrand());
             if (productsImage != null) {
                 // 이미지를 첨부했다면, 그 이미지의 해시값을 가져옴
                 // DB의 이미지 Url이 null이 아니라면, 그 이미지 Url으로 해시값을 가져옴
@@ -377,7 +377,7 @@ public class ProductServiceImpl implements ProductService {
                         productsOptionRepository.save(productsOption);
                     }
 
-                    ProductsImage image = productsImageRepository.findByProductNumberAndUsers(dto.getProductNumber(), users);
+                    ProductsImage image = productsImageRepository.findByProductNumberAndUsers(dto.getProductNumber(), users.getBrand());
 
                     log.info(image);
                     log.info(dto);
@@ -523,7 +523,7 @@ public class ProductServiceImpl implements ProductService {
                         productsOptionRepository.save(productsOption);
                     }
 
-                    ProductsImage image = productsImageRepository.findByProductNumberAndUsers(dto.getProductNumber(),users);
+                    ProductsImage image = productsImageRepository.findByProductNumberAndUsers(dto.getProductNumber(),users.getBrand());
 
                     log.info(image);
                     log.info(dto);
@@ -624,7 +624,7 @@ public class ProductServiceImpl implements ProductService {
                         }
                     }
 
-                    ProductsImage image = productsImageRepository.findByProductNumberAndUsers(dto.getProductNumber(),users);
+                    ProductsImage image = productsImageRepository.findByProductNumberAndUsers(dto.getProductNumber(), users.getBrand());
 
                     // URL 일치 여부 확인
                     if (image != null) {
@@ -1189,7 +1189,7 @@ public class ProductServiceImpl implements ProductService {
         }
 
         Users users = optionalUser.get();
-        List<ProductsImage> images = productsImageRepository.findByProductsIsNullAndUsers(users);
+        List<ProductsImage> images = productsImageRepository.findByProductsIsNullAndUsers(users.getBrand());
 
         return images.stream()
                 .map(this::convertToUploadImageReadDTO)
