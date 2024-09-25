@@ -16,7 +16,7 @@ public class DeliveryTrack {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long deliveryTrackId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "orderId", referencedColumnName = "orderId")
     private Orders order;
 

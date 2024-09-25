@@ -29,7 +29,7 @@ public class ProductsImage {
   @OnDelete(action = OnDeleteAction.CASCADE)
   private Brand brand;
 
-  @ManyToOne(fetch = FetchType.LAZY)
+  @OneToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "productId", referencedColumnName = "productId")
   @OnDelete(action = OnDeleteAction.CASCADE)
   private Products products;

@@ -18,6 +18,9 @@ public interface ProductsStarRepository extends JpaRepository<ProductsStar, Long
     @Query("select p from ProductsStar p where p.products.productId=:productId")
     Optional<ProductsStar> findByProductId(Long productId);
 
+    @Query("SELECT ps FROM ProductsStar ps WHERE ps.products.productId IN :productIds")
+    List<ProductsStar> findByProductIds(@Param("productIds") List<Long> productIds);
+
     @Query("SELECT ps FROM ProductsStar ps JOIN ps.products p WHERE p.category = :category ORDER BY ps.starAvg DESC")
     Page<ProductsStar> findByStarAvgDesc(@Param("category") String category, Pageable pageable);
 

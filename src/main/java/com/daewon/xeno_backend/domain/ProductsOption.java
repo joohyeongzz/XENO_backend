@@ -28,6 +28,13 @@ public class ProductsOption {
 
     private long stock;
 
+    public void decreaseStock(int quantity) {
+        if (this.stock < quantity) {
+            throw new RuntimeException("SoldOutException 발생. 주문한 상품량이 재고량보다 큽니다.");
+        }
+        this.stock -= quantity;
+    }
+
 
 }
 

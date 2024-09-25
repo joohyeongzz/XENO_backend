@@ -21,10 +21,10 @@ import java.util.Map;
 
 public interface ProductService {
 
-
+    ProductInfoDTO getProductInfoTest(Long productId);
     List<OrderProductIdsReadDTO> productOptionIdsRead(List<OrderProductIdsReadDTO> productOptionInfos);
 //    String asd(MultipartFile file);
-
+List<ProductColorInfoCardDTO> getProductsInfoByCategoryOriginal(String categoryId, String categorySubId);
     void uploadImages(String productNumber, List<MultipartFile> productImages ,MultipartFile productDetailImage);
 
     void updateProductImages(String productNumber, List<MultipartFile> productImages ,MultipartFile productDetailImage) throws Exception;

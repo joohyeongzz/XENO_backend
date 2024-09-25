@@ -11,8 +11,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class AwsConfig {
 
-    String accessKeyId = System.getenv("AWS_ACCESS_KEY_ID");
-    String secretAccessKey = System.getenv("AWS_SECRET_ACCESS_KEY");
+   
 
     @Value("${aws.s3.region}")
     private String region;

@@ -116,26 +116,10 @@ public class OrdersController {
                                         @AuthenticationPrincipal UserDetails userDetails) {
         try {
             String userEmail = userDetails.getUsername();
-
-//            Customer customer = customerRepository.findByUserId(userRepository.findByEmail(userEmail)
-//                .orElseThrow(() -> new UserNotFoundException("User not found")).getUserId())
-//                .orElseThrow(() -> new UserNotFoundException("Customer not found"));
-//
-//            int usedPoint = ordersDTO.stream().mapToInt(OrdersDTO::getUsedPoint).sum();
-//            if (usedPoint > customer.getPoint()) {
-//                return ResponseEntity.status(400).body("사용 가능한 적립금이 부족합니다.");
-//            }
-//            customer.setPoint(customer.getPoint() - usedPoint);
-//            customerRepository.save(customer);
-//
-//            // 상품 가격에서 사용한 적립금만큼 차감
-//            ordersDTO.forEach(dto -> dto.setAmount(dto.getAmount() - dto.getUsedPoint()));
-
-            log.info(ordersDTO);
             List<OrdersDTO> createdOrder = ordersService.createOrders(ordersDTO, userEmail);
             return ResponseEntity.ok(createdOrder);
-        } catch (Exception e) {
-            return ResponseEntity.status(404).body("해당하는 상품 또는 재고가 없습니다.");
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
     }
 

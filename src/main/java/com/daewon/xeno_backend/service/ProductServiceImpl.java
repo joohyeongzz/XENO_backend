@@ -32,7 +32,12 @@ import org.apache.poi.ss.util.CellRangeAddressList;
 import org.apache.poi.ss.util.CellReference;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Page;
@@ -62,6 +67,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ProductServiceImpl implements ProductService {
 
+
+
+
+    private final CacheManager cacheManager;
     private final ProductsRepository productsRepository;
     private final ProductsImageRepository productsImageRepository;
     private final ProductsStarRepository productsStarRepository;
@@ -316,7 +325,7 @@ public class ProductServiceImpl implements ProductService {
         return (a == null || a.isEmpty()) ? (b == null || b.isEmpty()) : a.equals(b);
     }
 
-
+    @CachePut(value = "products", key = "#product.productId")
     @Transactional
     public void saveProductsFromExcel(MultipartFile excel) {
         try {
@@ -437,7 +446,7 @@ public class ProductServiceImpl implements ProductService {
             // Handle the exception
         }
     }
-
+    @CachePut(value = "products", key = "#product.productId")
     @Transactional
     public void updateProductsFromExcel(MultipartFile excel) {
              try {
@@ -845,15 +854,18 @@ public class ProductServiceImpl implements ProductService {
         return dto;
     }
 
-    @Override
-    public List<ProductColorInfoCardDTO> getProductsInfoByCategory(String categoryId, String categorySubId) { // 카테고리 검색
+    public List<ProductColorInfoCardDTO> getProductsInfoByCategoryOriginal(String categoryId, String categorySubId) {
         List<Products> productsList = new ArrayList<>();
-        if (categoryId.equals("000") && categorySubId.isEmpty()) { // 받은 카테고리가 000이고 하위 카테고리가 없을 시 전체 검색
+
+        if (categoryId.equals("000") && categorySubId.isEmpty()) {
+            // 전체 검색
             productsList = productsRepository.findAll();
-        } else if (categorySubId.isEmpty()) { // 하위 카테고리가 없을 시 상위 카테고리만 ex) 상의만 검색, 하의만 검색
+        } else if (categorySubId.isEmpty()) {
+            // 상위 카테고리만 검색
             String category = CategoryUtils.getCategoryFromCode(categoryId);
             productsList = productsRepository.findByCategory(category);
-        } else { // 상위 카테고리와 하위 카테고리로 검색
+        } else {
+            // 상위 카테고리와 하위 카테고리로 검색
             String category = CategoryUtils.getCategoryFromCode(categoryId);
             String categorySub = CategoryUtils.getCategorySubFromCode(categorySubId);
             productsList = productsRepository.findByCategorySub(category, categorySub);
@@ -861,51 +873,115 @@ public class ProductServiceImpl implements ProductService {
 
         List<ProductColorInfoCardDTO> productsInfoCardDTOList = new ArrayList<>();
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        String currentUserName = authentication.getName();
-
-        String email = "joohyeongzz@naver.com";
-
-        Users users = userRepository.findByEmail(currentUserName)
-                .orElse(null);
-
-        log.info(users);
+//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+//        String currentUserName = authentication.getName();
+//        Users users = userRepository.findByEmail(currentUserName).orElse(null);
 
         for (Products products : productsList) {
-                ProductColorInfoCardDTO dto = new ProductColorInfoCardDTO();
-                dto.setBrandName(products.getBrandName());
-                dto.setName(products.getName());
-                dto.setCategory(products.getCategory());
-                dto.setCategorySub(products.getCategorySub());
-                dto.setPrice(products.getPrice());
-                dto.setPriceSale(products.getPriceSale());
-                dto.setSale(products.getIsSale());
-                dto.setColor(products.getColor());
-                if (users != null) {
-                    Long userId = users.getUserId();
-                    LikeProducts likeProducts = likeRepository
-                            .findByProductIdAndUserId(products.getProductId(), userId);
-                    dto.setLike(likeProducts != null ? likeProducts.isLike() : false);
-                } else {
-                    dto.setLike(false);
-                }
-                ProductsLike productsLike = productsLikeRepository
-                        .findByProductId(products.getProductId()).orElse(null);
-                ProductsStar productsStar = productsStarRepository
-                        .findByProductId(products.getProductId()).orElse(null);
-                ProductsImage productsImage = productsImageRepository
-                        .findByProductId(products.getProductId());
+            ProductColorInfoCardDTO dto = new ProductColorInfoCardDTO();
+            dto.setBrandName(products.getBrandName());
+            dto.setName(products.getName());
+            dto.setCategory(products.getCategory());
+            dto.setCategorySub(products.getCategorySub());
+            dto.setPrice(products.getPrice());
+            dto.setPriceSale(products.getPriceSale());
+            dto.setSale(products.getIsSale());
+            dto.setColor(products.getColor());
 
+//            if (users != null) {
+//                Long userId = users.getUserId();
+//                LikeProducts likeProducts = likeRepository
+//                        .findByProductIdAndUserId(products.getProductId(), userId);
+//
+//                dto.setLike(likeProducts != null ? likeProducts.isLike() : false);
+//            } else {
+//                dto.setLike(false);
+//            }
 
-                dto.setProductImage(productsImage.getUrl_1());
+            ProductsLike productsLike = productsLikeRepository
+                    .findByProductId(products.getProductId()).orElse(null);
+            ProductsStar productsStar = productsStarRepository
+                    .findByProductId(products.getProductId()).orElse(null);
+            ProductsImage productsImage = productsImageRepository
+                    .findByProductId(products.getProductId());
 
-                dto.setProductId(products.getProductId());
-                dto.setLikeIndex(productsLike != null ? productsLike.getLikeIndex() : 0);
-                dto.setStarAvg(productsStar != null ? productsStar.getStarAvg() : 0);
+            dto.setProductImage(productsImage.getUrl_1());
+            dto.setProductId(products.getProductId());
+            dto.setLikeIndex(productsLike != null ? productsLike.getLikeIndex() : 0);
+            dto.setStarAvg(productsStar != null ? productsStar.getStarAvg() : 0);
 
-                productsInfoCardDTOList.add(dto);
-            }
+            productsInfoCardDTOList.add(dto);
+        }
+
+        return productsInfoCardDTOList;
+    }
+
+    @Override
+    public List<ProductColorInfoCardDTO> getProductsInfoByCategory(String categoryId, String categorySubId) {
+        List<Products> productsList;
+
+        // 카테고리 및 하위 카테고리에 따라 상품 조회
+        if (categoryId.equals("000") && categorySubId.isEmpty()) {
+            productsList = productsRepository.findAll();
+        } else if (categorySubId.isEmpty()) {
+            String category = CategoryUtils.getCategoryFromCode(categoryId);
+            productsList = productsRepository.findByCategory(category);
+        } else {
+            String category = CategoryUtils.getCategoryFromCode(categoryId);
+            String categorySub = CategoryUtils.getCategorySubFromCode(categorySubId);
+            productsList = productsRepository.findByCategorySub(category, categorySub);
+        }
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserName = authentication.getName();
+        Users users = userRepository.findByEmail(currentUserName).orElse(null);
+
+        List<Long> productIds = productsList.stream()
+                .map(Products::getProductId)
+                .collect(Collectors.toList());
+
+        // 연관된 엔티티를 한 번의 쿼리로 가져온다
+        List<LikeProducts> likeProductsList = likeRepository.findByProductIds(productIds,users.getUserId());
+        List<ProductsLike> productsLikeList = productsLikeRepository.findByProductIds(productIds);
+        List<ProductsStar> productsStarList = productsStarRepository.findByProductIds(productIds);
+        List<ProductsImage> productsImageList = productsImageRepository.findByProductIds(productIds);
+
+        // 각 엔티티를 맵으로 변환하여 데이터 접근 효율성을 높인다
+        Map<Long, LikeProducts> likeProductsMap = likeProductsList.stream()
+                .collect(Collectors.toMap(lp -> lp.getProductsLike().getProducts().getProductId(), lp -> lp));
+        Map<Long, ProductsLike> productsLikeMap = productsLikeList.stream()
+                .collect(Collectors.toMap(pl -> pl.getProducts().getProductId(), pl -> pl));
+        Map<Long, ProductsStar> productsStarMap = productsStarList.stream()
+                .collect(Collectors.toMap(ps -> ps.getProducts().getProductId(), ps -> ps));
+        Map<Long, ProductsImage> productsImageMap = productsImageList.stream()
+                .collect(Collectors.toMap(pi -> pi.getProducts().getProductId(), pi -> pi));
+
+        // DTO 리스트 생성
+        List<ProductColorInfoCardDTO> productsInfoCardDTOList = productsList.stream().map(product -> {
+            ProductColorInfoCardDTO dto = new ProductColorInfoCardDTO();
+            dto.setBrandName(product.getBrandName());
+            dto.setName(product.getName());
+            dto.setCategory(product.getCategory());
+            dto.setCategorySub(product.getCategorySub());
+            dto.setPrice(product.getPrice());
+            dto.setPriceSale(product.getPriceSale());
+            dto.setSale(product.getIsSale());
+            dto.setColor(product.getColor());
+
+            // 연관된 엔티티를 맵에서 조회하여 설정
+            LikeProducts likeProducts = likeProductsMap.get(product.getProductId());
+            ProductsLike productsLike = productsLikeMap.get(product.getProductId());
+            ProductsStar productsStar = productsStarMap.get(product.getProductId());
+            ProductsImage productsImage = productsImageMap.get(product.getProductId());
+
+            dto.setLike(likeProducts != null ? likeProducts.isLike() : false);
+            dto.setLikeIndex(productsLike != null ? productsLike.getLikeIndex() : 0);
+            dto.setStarAvg(productsStar != null ? productsStar.getStarAvg() : 0);
+            dto.setProductImage(productsImage != null ? productsImage.getUrl_1() : "");
+
+            return dto;
+        }).collect(Collectors.toList());
+
         return productsInfoCardDTOList;
     }
 
@@ -1087,29 +1163,43 @@ public class ProductServiceImpl implements ProductService {
 
 
     @Override
-    public ProductInfoDTO getProductInfo(Long productId) {
+    public ProductInfoDTO getProductInfoTest(Long productId) {
 
         Products products = productsRepository.findByProductId(productId);
-        ProductInfoDTO productInfoDTO = modelMapper.map(products, ProductInfoDTO.class); // dto 매핑
+        ProductInfoDTO productInfoDTO = ProductInfoDTO.builder()
+                .productId(productId)
+                .brandName(products.getBrandName())
+                .category(products.getCategory())
+                .isSale(products.getIsSale())
+                .categorySub(products.getCategorySub())
+                .price(products.getPrice())
+                .color(products.getColor())
+                .priceSale(products.getPriceSale())
+                .productNumber(products.getProductNumber())
+                .season(products.getSeason())
+                .name(products.getName())
+                .build();
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+//        ProductInfoDTO productInfoDTO = modelMapper.map(products, ProductInfoDTO.class); // dto 매핑
 
-        log.info(authentication);
-        String currentUserName = authentication.getName();
+//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        log.info(currentUserName);
+//        log.info(authentication);
+//        String currentUserName = authentication.getName();
+
+//        log.info(currentUserName);
 
 
-        Users users = userRepository.findByEmail(currentUserName)
-                .orElse(null);
+//        Users users = userRepository.findByEmail(currentUserName)
+//                .orElse(null);
 
-        if (users != null) {
-            Long userId = users.getUserId();
-            LikeProducts likeProducts = likeRepository.findByProductIdAndUserId(productId, userId);
-            productInfoDTO.setLike(likeProducts != null ? likeProducts.isLike() : false);
-        } else {
-            productInfoDTO.setLike(false);
-        }
+//        if (users != null) {
+//            Long userId = users.getUserId();
+//            LikeProducts likeProducts = likeRepository.findByProductIdAndUserId(productId, userId);
+//            productInfoDTO.setLike(likeProducts != null ? likeProducts.isLike() : false);
+//        } else {
+//            productInfoDTO.setLike(false);
+//        }
 
         ProductsStar productsStar = productsStarRepository.findByProductId(productId).orElse(null);
 
@@ -1119,16 +1209,66 @@ public class ProductServiceImpl implements ProductService {
 
         productInfoDTO.setLikeIndex(productsLike != null ? productsLike.getLikeIndex() : 0);
 
-        productInfoDTO.setReviewIndex(
-                reviewRepository.countByProductId(productId) != 0
-                        ? reviewRepository.countByProductId(productId)
-                        : 0);
+//        productInfoDTO.setReviewIndex(
+//                reviewRepository.countByProductId(productId) != 0
+//                        ? reviewRepository.countByProductId(productId)
+//                        : 0);
 
         ProductsImage image = productsImageRepository.findByProductId(products.getProductId());
         String[] productImages = {image.getUrl_1(),image.getUrl_2(),image.getUrl_3(),image.getUrl_4(),image.getUrl_5(),image.getUrl_6()};
         productInfoDTO.setProductImages(productImages);
         productInfoDTO.setProductDetailImage(image.getDetail_url());
         log.info(productInfoDTO);
+        return productInfoDTO;
+    }
+    @Transactional
+    @Cacheable(value = "products", key = "#productId")
+    public ProductInfoDTO getProductInfo(Long productId) {
+
+        Cache cache = cacheManager.getCache("products");
+        if (cache.get(productId) == null) {
+            System.out.println("Cache miss for productId: " + productId);
+        } else {
+            System.out.println("Cache hit for productId: " + productId);
+        }
+
+        Products products = productsRepository.findProductWithDetailsById(productId);
+        ProductInfoDTO productInfoDTO = ProductInfoDTO.builder()
+                .productId(productId)
+                .brandName(products.getBrandName())
+                .category(products.getCategory())
+                .isSale(products.getIsSale())
+                .categorySub(products.getCategorySub())
+                .price(products.getPrice())
+                .color(products.getColor())
+                .priceSale(products.getPriceSale())
+                .productNumber(products.getProductNumber())
+                .season(products.getSeason())
+                .name(products.getName())
+                .build();
+
+        if (products.getStar() != null) {
+            productInfoDTO.setStarAvg(products.getStar().getStarAvg());
+        } else {
+            productInfoDTO.setStarAvg(0);
+        }
+
+        if (products.getLike() != null) {
+            productInfoDTO.setLikeIndex(products.getLike().getLikeIndex());
+        } else {
+            productInfoDTO.setLikeIndex(0);
+        }
+
+        if (products.getImage() != null) {
+            ProductsImage image = products.getImage();
+            String[] productImages = {
+                    image.getUrl_1(), image.getUrl_2(), image.getUrl_3(),
+                    image.getUrl_4(), image.getUrl_5(), image.getUrl_6()
+            };
+            productInfoDTO.setProductImages(productImages);
+            productInfoDTO.setProductDetailImage(image.getDetail_url());
+        }
+
         return productInfoDTO;
     }
 

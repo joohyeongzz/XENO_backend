@@ -19,7 +19,6 @@ public class Products {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY) // auto_increment와 같은
-
   private long productId;
 
   private String brandName;
@@ -41,6 +40,17 @@ public class Products {
   private String season;
 
   private String color;
+
+  @OneToOne(mappedBy = "products", cascade = CascadeType.ALL, orphanRemoval = true)
+  private ProductsImage image;
+
+  @OneToOne(mappedBy = "products", cascade = CascadeType.ALL, orphanRemoval = true)
+  private ProductsStar star;
+
+  @OneToOne(mappedBy = "products", cascade = CascadeType.ALL, orphanRemoval = true)
+  private ProductsLike like;
+
+
 
 
   public boolean getIsSale() {

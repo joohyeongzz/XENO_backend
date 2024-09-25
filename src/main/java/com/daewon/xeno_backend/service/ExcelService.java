@@ -25,6 +25,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -42,8 +43,10 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.Month;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import static org.apache.poi.ss.usermodel.CellType.BLANK;
 import static org.apache.poi.ss.usermodel.CellType.STRING;
 
 @Service
@@ -605,7 +608,128 @@ public class ExcelService {
         }
     }
 
-    // 운송장 등록하기
+//    // 운송장 등록하기
+//    @Transactional
+//    public void parseOrderExcelFile(MultipartFile excel) throws IOException {
+//        if (excel.isEmpty()) {
+//            throw new RuntimeException("업로드된 파일이 비어 있습니다.");
+//        }
+//
+//        try (InputStream fis = excel.getInputStream(); Workbook workbook = new XSSFWorkbook(fis)) {
+//            Sheet sheet = workbook.getSheetAt(0);
+//
+//            for (Row row : sheet) {
+//                // 첫 번째 행(헤더)은 건너뜀
+//                if (row.getRowNum() == 0 || row.getCell(0) == null) {continue;}
+//
+//
+//                log.info("row"+row.getCell(0));
+//
+//                Cell cell11 = row.getCell(11);
+//                Cell cell12 = row.getCell(12);
+//                String trackingNumber = "";
+//                if (cell12.getCellType() == CellType.NUMERIC) {
+//                    double numericValue = cell12.getNumericCellValue();
+//                    trackingNumber = String.valueOf((long)numericValue);
+//                } else if (cell12.getCellType() == STRING) {
+//                    String stringValue = cell12.getStringCellValue();
+//                    trackingNumber = stringValue;
+//                } else {
+//                    // 다른 셀 타입 처리
+//                }
+//
+//
+//                if (cell11 == null || cell12 == null) {
+//                    throw new RuntimeException("필수 셀 값이 비어 있습니다. 행 번호: " + row.getRowNum());
+//                }
+//
+//                String carrierId = cell11.getStringCellValue();
+//
+//
+//                String url = "https://apis.tracker.delivery/graphql"; // api 요청 주소
+//
+//                // HTTP 헤더 설정
+//                HttpHeaders headers = new HttpHeaders();
+//                headers.set("Content-Type", "application/json");
+//                headers.set("Authorization", "TRACKQL-API-KEY 97vetlqkkgltulpe7tmfq9pr2:3ii271qrmmir9pvnsj23s34cvv2l3nokhhn9desbbtkb08cqjoi");
+//
+//                // GraphQL 요청 내용
+//                String query = "query Track($carrierId: ID!, $trackingNumber: String!) {" +
+//                        "track(carrierId: $carrierId, trackingNumber: $trackingNumber) {" +
+//                        "lastEvent {" +
+//                        "time " +
+//                        "status {" +
+//                        "code " +
+//                        "}" +
+//                        "}" +
+//                        "}" +
+//                        "}";
+//
+//                // 요청 바디 작성
+//                Map<String, Object> variables = new HashMap<>();
+//                variables.put("carrierId", carrierId);
+//                variables.put("trackingNumber", trackingNumber); // 문자열로 변환된 trackingNumber
+//
+//                Map<String, Object> body = new HashMap<>();
+//                body.put("query", query);
+//                body.put("variables", variables);
+//
+//                HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+//
+//                try {
+//                    // API 요청
+//                    ResponseEntity<String> response = restTemplate.exchange(
+//                            url,
+//                            HttpMethod.POST,
+//                            entity,
+//                            String.class
+//                    );
+//
+//                    String responseBody = response.getBody();
+//                    if (responseBody != null) {
+//                        JsonNode jsonNode = jacksonObjectMapper.readTree(responseBody);
+//                        JsonNode errorsNode = jsonNode.path("errors");
+//                        JsonNode dataNode = jsonNode.path("data").path("track");
+//
+//                        // 처리 성공 여부 확인
+//                        if (errorsNode.isArray() && errorsNode.size() > 0) {
+//                            JsonNode firstError = errorsNode.get(0);
+//                            String errorMessage = firstError.path("message").asText();
+//                            log.error("Error message: " + errorMessage); // 에러 메시지 띄우기
+//                        } else {
+//                            // 해당 행에 해당하는 주문 찾기
+//                            Orders order = ordersRepository.findByOrderId((long)row.getCell(0).getNumericCellValue()).orElse(null);
+//
+//                            log.info(order);
+//
+//                            // 주문이 배송사에 등록됐는지 여부 확인
+//                            DeliveryTrack deliveryTrack = deliveryTrackRepository.findByOrders(order);
+//                            if(deliveryTrack != null) {
+//                                throw new RemoteException("이미 존재하는 배송 정보입니다.");
+//                            } else {
+//                                DeliveryTrack newDeliveryTrack = DeliveryTrack.builder()
+//                                        .carrierId(carrierId)
+//                                        .trackingNumber(trackingNumber)
+//                                        .order(order)
+//                                        .build();
+//                                deliveryTrackRepository.save(newDeliveryTrack);
+//                            }
+//                            order.setStatus("출고 완료");
+//                            ordersRepository.save(order);
+//
+//                        }
+//                    } else {
+//                        log.warn("Response body is null.");
+//                    }
+//                } catch (HttpClientErrorException | HttpServerErrorException e) {
+//                    log.error("HTTP error during API request: " + e.getMessage(), e);
+//                } catch (Exception e) {
+//                    log.error("Unexpected error: " + e.getMessage(), e);
+//                }
+//            }
+//        }
+//    }
+
     @Transactional
     public void parseOrderExcelFile(MultipartFile excel) throws IOException {
         if (excel.isEmpty()) {
@@ -615,35 +739,60 @@ public class ExcelService {
         try (InputStream fis = excel.getInputStream(); Workbook workbook = new XSSFWorkbook(fis)) {
             Sheet sheet = workbook.getSheetAt(0);
 
+            // 각 행을 비동기적으로 처리
+            List<CompletableFuture<Void>> futures = new ArrayList<>();
             for (Row row : sheet) {
                 // 첫 번째 행(헤더)은 건너뜀
-                if (row.getRowNum() == 0 || row.getCell(0) == null) {continue;}
+                if (row.getRowNum() == 0 || row.getCell(0) == null) {
+                    continue;
+                }
 
+                // 비동기 작업 추가
+                futures.add(processRowAsync(row));
+            }
 
-                log.info("row"+row.getCell(0));
-                
+            // 모든 비동기 작업 완료 대기
+            try {
+                CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+                log.info("모든 행의 처리 완료.");
+            } catch (Exception e) {
+                log.error("비동기 작업 중 오류 발생: " + e.getMessage(), e);
+                // 필요시 적절한 오류 처리 및 사용자 피드백 제공
+            }
+        }
+    }
+
+    @Async
+    public CompletableFuture<Void> processRowAsync(Row row) {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                log.info("Processing row: " + row.getCell(0));
+
                 Cell cell11 = row.getCell(11);
                 Cell cell12 = row.getCell(12);
                 String trackingNumber = "";
                 if (cell12.getCellType() == CellType.NUMERIC) {
                     double numericValue = cell12.getNumericCellValue();
-                    trackingNumber = String.valueOf((long)numericValue);
-                } else if (cell12.getCellType() == STRING) {
-                    String stringValue = cell12.getStringCellValue();
-                    trackingNumber = stringValue;
+                    trackingNumber = String.valueOf((long) numericValue);
+                } else if (cell12.getCellType() == CellType.STRING) {
+                    trackingNumber = cell12.getStringCellValue();
+                    if (trackingNumber.isEmpty()) {
+                        throw new RuntimeException("필수 셀 값이 비어 있습니다. 행 번호: " + row.getRowNum());
+                    }
                 } else {
-                    // 다른 셀 타입 처리
+                    throw new RuntimeException("지원하지 않는 셀 타입. 행 번호: " + row.getRowNum());
                 }
-
 
                 if (cell11 == null || cell12 == null) {
                     throw new RuntimeException("필수 셀 값이 비어 있습니다. 행 번호: " + row.getRowNum());
                 }
 
                 String carrierId = cell11.getStringCellValue();
+                if (carrierId.isEmpty()) {
+                    throw new RuntimeException("운송사 ID가 비어 있습니다. 행 번호: " + row.getRowNum());
+                }
 
-
-                String url = "https://apis.tracker.delivery/graphql"; // api 요청 주소
+                String url = "https://apis.tracker.delivery/graphql"; // API 요청 주소
 
                 // HTTP 헤더 설정
                 HttpHeaders headers = new HttpHeaders();
@@ -660,12 +809,12 @@ public class ExcelService {
                         "}" +
                         "}" +
                         "}" +
-                        "}";
+                        "}" ;
 
                 // 요청 바디 작성
                 Map<String, Object> variables = new HashMap<>();
                 variables.put("carrierId", carrierId);
-                variables.put("trackingNumber", trackingNumber); // 문자열로 변환된 trackingNumber
+                variables.put("trackingNumber", trackingNumber);
 
                 Map<String, Object> body = new HashMap<>();
                 body.put("query", query);
@@ -673,58 +822,57 @@ public class ExcelService {
 
                 HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
 
-                try {
-                    // API 요청
-                    ResponseEntity<String> response = restTemplate.exchange(
-                            url,
-                            HttpMethod.POST,
-                            entity,
-                            String.class
-                    );
+                // API 요청
+                ResponseEntity<String> response = restTemplate.exchange(
+                        url,
+                        HttpMethod.POST,
+                        entity,
+                        String.class
+                );
 
-                    String responseBody = response.getBody();
-                    if (responseBody != null) {
-                        JsonNode jsonNode = jacksonObjectMapper.readTree(responseBody);
-                        JsonNode errorsNode = jsonNode.path("errors");
-                        JsonNode dataNode = jsonNode.path("data").path("track");
+                String responseBody = response.getBody();
+                if (responseBody != null) {
+                    JsonNode jsonNode = jacksonObjectMapper.readTree(responseBody);
+                    JsonNode errorsNode = jsonNode.path("errors");
+                    JsonNode dataNode = jsonNode.path("data").path("track");
 
-                        // 처리 성공 여부 확인
-                        if (errorsNode.isArray() && errorsNode.size() > 0) {
-                            JsonNode firstError = errorsNode.get(0);
-                            String errorMessage = firstError.path("message").asText();
-                            log.error("Error message: " + errorMessage); // 에러 메시지 띄우기
-                        } else {
-                            // 해당 행에 해당하는 주문 찾기
-                            Orders order = ordersRepository.findByOrderId((long)row.getCell(0).getNumericCellValue()).orElse(null);
-
-                            log.info(order);
-
-                            // 주문이 배송사에 등록됐는지 여부 확인
-                            DeliveryTrack deliveryTrack = deliveryTrackRepository.findByOrders(order);
-                            if(deliveryTrack != null) {
-                                throw new RemoteException("이미 존재하는 배송 정보입니다.");
-                            } else {
-                                DeliveryTrack newDeliveryTrack = DeliveryTrack.builder()
-                                        .carrierId(carrierId)
-                                        .trackingNumber(trackingNumber)
-                                        .order(order)
-                                        .build();
-                                deliveryTrackRepository.save(newDeliveryTrack);
-                            }
-                            order.setStatus("출고 완료");
-                            ordersRepository.save(order);
-
-                        }
+                    // 처리 성공 여부 확인
+                    if (errorsNode.isArray() && errorsNode.size() > 0) {
+                        JsonNode firstError = errorsNode.get(0);
+                        String errorMessage = firstError.path("message").asText();
+                        log.error("Error message: " + errorMessage); // 에러 메시지 띄우기
                     } else {
-                        log.warn("Response body is null.");
+                        // 해당 행에 해당하는 주문 찾기
+                        Orders order = ordersRepository.findByOrderId((long) row.getCell(0).getNumericCellValue()).orElse(null);
+
+                        if (order == null) {
+                            throw new RuntimeException("주문을 찾을 수 없습니다. 행 번호: " + row.getRowNum());
+                        }
+
+                        // 주문이 배송사에 등록됐는지 여부 확인
+                        DeliveryTrack deliveryTrack = deliveryTrackRepository.findByOrders(order);
+                        if (deliveryTrack != null) {
+                            throw new RemoteException("이미 존재하는 배송 정보입니다.");
+                        } else {
+                            DeliveryTrack newDeliveryTrack = DeliveryTrack.builder()
+                                    .carrierId(carrierId)
+                                    .trackingNumber(trackingNumber)
+                                    .order(order)
+                                    .build();
+                            deliveryTrackRepository.save(newDeliveryTrack);
+                        }
+                        order.setStatus("출고 완료");
+                        ordersRepository.save(order);
                     }
-                } catch (HttpClientErrorException | HttpServerErrorException e) {
-                    log.error("HTTP error during API request: " + e.getMessage(), e);
-                } catch (Exception e) {
-                    log.error("Unexpected error: " + e.getMessage(), e);
+                } else {
+                    log.warn("Response body is null.");
                 }
+            } catch (HttpClientErrorException | HttpServerErrorException e) {
+                log.error("HTTP error during API request: " + e.getMessage(), e);
+            } catch (Exception e) {
+                log.error("Unexpected error: " + e.getMessage(), e);
             }
-        }
+        });
     }
 
 

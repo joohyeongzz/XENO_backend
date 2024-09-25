@@ -18,6 +18,14 @@ public interface ProductsRepository extends JpaRepository<Products, Long>{
     @Query("SELECT p FROM Products p WHERE p.category = :category")
     List<Products> findByCategory(String category);
 
+    @Query("SELECT p FROM Products p " +
+            "LEFT JOIN FETCH LikeProducts lp ON lp.productsLike.products.productId = p.productId " +
+            "LEFT JOIN FETCH ProductsLike pl ON pl.products.productId = p.productId " +
+            "LEFT JOIN FETCH ProductsStar ps ON ps.products.productId = p.productId " +
+            "LEFT JOIN FETCH ProductsImage pi ON pi.products.productId = p.productId " +
+            "WHERE p.category = :category")
+    List<Products> findByCategoryWithDetails(String category);
+
     @Query("SELECT p FROM Products p WHERE p.category = :category and p.categorySub = :categorySub")
     List<Products> findByCategorySub(String category,String categorySub);
 
@@ -28,9 +36,26 @@ public interface ProductsRepository extends JpaRepository<Products, Long>{
     @Query("SELECT p FROM Products p WHERE p.productId = :productId")
     Products findByProductId(@Param("productId") long productId);
 
+
+
+    @Query("SELECT p FROM Products p " +
+            "LEFT JOIN FETCH p.image i " +
+            "LEFT JOIN FETCH p.star s " +
+            "LEFT JOIN FETCH p.like l " +
+            "WHERE p.productId = :productId")
+    Products findProductWithDetailsById(@Param("productId") Long productId);
+
     // 특정 브랜드 이름으로 모든 제품을 찾는 메서드
     List<Products> findByBrandName(String brandName);
 
+
+    @Query("SELECT p, l, ps, pl, i FROM Products p " +
+            "LEFT JOIN LikeProducts l ON p.productId = l.productsLike.products.productId " +
+            "LEFT JOIN ProductsStar ps ON p.productId = ps.products.productId " +
+            "LEFT JOIN ProductsLike pl ON p.productId = pl.products.productId " +
+            "LEFT JOIN ProductsImage i ON p.productId = i.products.productId " +
+            "WHERE p.productId = :productId")
+    Object[] findProductWithDetails(@Param("productId") Long productId);
 
 
 }

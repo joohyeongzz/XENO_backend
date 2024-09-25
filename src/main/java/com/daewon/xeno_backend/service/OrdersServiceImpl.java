@@ -14,7 +14,9 @@ import com.daewon.xeno_backend.repository.Products.ProductsOptionRepository;
 import com.daewon.xeno_backend.repository.Products.ProductsBrandRepository;
 import com.daewon.xeno_backend.repository.auth.UserRepository;
 import io.jsonwebtoken.io.IOException;
+import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import net.minidev.json.JSONObject;
@@ -59,6 +61,8 @@ public class OrdersServiceImpl implements OrdersService {
     private final ReviewRepository reviewRepository;
     private final DeliveryTrackRepository deliveryTrackRepository;
     private final OrdersRefundRepository ordersRefundRepository;
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @Override
     public OrderDeliveryInfoReadDTO getOrderDeliveryInfo(Long userId) {
@@ -95,45 +99,61 @@ public class OrdersServiceImpl implements OrdersService {
     @Transactional
     @Override
     public List<OrdersDTO> createOrders(List<OrdersDTO> ordersDTO, String email) {
-
-
         Users users = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없음"));
 
         String orderPayId = ordersDTO.get(0).getOrderPayId();
-
         Long orderNumber = generateOrderNumber();
-
         List<Orders> savedOrders = new ArrayList<>();
 
+        for (OrdersDTO dto : ordersDTO) {
+            ProductsOption productsOption = productsOptionRepository.findByProductOptionIdForUpdate(dto.getProductOptionId());
 
-        for(OrdersDTO dto : ordersDTO) {
-            ProductsBrand brand = productsBrandRepository.findByProducts(findProductOption(dto.getProductOptionId()).getProducts());
-            if(brand != null) {
-                Orders orders = Orders.builder()
-                        .orderPayId(orderPayId)
-                        .orderNumber(orderNumber)
-                        .productsOption(findProductOption(dto.getProductOptionId()))
-                        .customer(users)
-                        .brand(brand.getBrand())
-                        .status("결제 완료")
-                        .paymentKey(dto.getPaymentKey())
-                        .req(dto.getReq())
-                        .quantity(dto.getQuantity())
-                        .amount(dto.getAmount())
-                        .build();
-                savedOrders.add(ordersRepository.save(orders));
-                ProductsOption productsOption = productsOptionRepository.findByProductOptionId(dto.getProductOptionId());
-                productsOption.setStock(productsOption.getStock() - dto.getQuantity());
-                productsOptionRepository.save(productsOption);
+            if (productsOption == null) {
+                throw new RuntimeException("상품의 사이즈를 찾을 수 없음");
             }
+
+            if (productsOption.getStock() < dto.getQuantity()) {
+                throw new RuntimeException("재고 부족: " + productsOption.getProducts().getName()+ "의" +productsOption.getStock());
+            }
+
+            productsOption.decreaseStock(dto.getQuantity());
+
+            ProductsBrand brand = productsBrandRepository.findByProducts(findProductOption(dto.getProductOptionId()).getProducts());
+            if (brand == null) {
+                throw new RuntimeException("상품을 찾을 수 없음");
+            }
+
+            Orders orders = Orders.builder()
+                    .orderPayId(orderPayId)
+                    .orderNumber(orderNumber)
+                    .productsOption(findProductOption(dto.getProductOptionId()))
+                    .customer(users)
+                    .brand(brand.getBrand())
+                    .status("결제 완료")
+                    .paymentKey(dto.getPaymentKey())
+                    .req(dto.getReq())
+                    .quantity(dto.getQuantity())
+                    .amount(dto.getAmount())
+                    .build();
+            savedOrders.add(ordersRepository.save(orders));
         }
 
-        // 저장된 주문들을 DTO로 변환하여 반환
-        return savedOrders.stream()
-                .map(this::convertToDT1)
+        List<OrdersDTO> convertedOrdersDTO = savedOrders.stream()
+                .map(order -> new OrdersDTO(
+                        order.getOrderPayId(),
+                        order.getProductsOption().getProductOptionId(),
+                        order.getReq(),
+                        order.getQuantity(),
+                        order.getAmount(),
+                        order.getUsePoint(),
+                        order.getPaymentKey()
+                ))
                 .collect(Collectors.toList());
+
+        return convertedOrdersDTO;
     }
+
 
     @Override
     @Transactional

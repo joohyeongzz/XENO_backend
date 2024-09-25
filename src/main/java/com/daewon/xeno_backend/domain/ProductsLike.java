@@ -20,7 +20,7 @@ public class ProductsLike {
   @GeneratedValue(strategy = GenerationType.IDENTITY) // auto_increment와 같은
   private long productLikeId;
 
-  @ManyToOne(fetch = FetchType.LAZY)
+  @OneToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "productId", referencedColumnName = "productId")
   @OnDelete(action = OnDeleteAction.CASCADE)
   private Products products;

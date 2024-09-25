@@ -17,6 +17,10 @@ public interface LikeRepository extends JpaRepository<LikeProducts, Long> {
     @Query("SELECT l FROM LikeProducts l WHERE l.productsLike.products.productId = :productId and l.users.userId = :userId")
     LikeProducts findByProductIdAndUserId(@Param("productId") Long productId, @Param("userId") Long userId);
 
+
+    @Query("SELECT lp FROM LikeProducts lp WHERE lp.productsLike.products.productId IN :productIds AND lp.users.userId = :userId")
+    List<LikeProducts> findByProductIds(@Param("productIds") List<Long> productIds, Long userId);
+
     @Query("SELECT l FROM LikeProducts l WHERE l.users.userId = :userId")
     List<LikeProducts> findByUserId(@Param("userId") Long userId);
 }
